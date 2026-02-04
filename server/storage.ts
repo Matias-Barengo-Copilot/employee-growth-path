@@ -43,6 +43,7 @@ export interface IStorage {
   getEmployeeByUserId(userId: string): Promise<Employee | undefined>;
   getEmployeeById(id: string): Promise<Employee | undefined>;
   getEmployeesByCompany(companyId: string): Promise<Employee[]>;
+  getDemoEmployee(): Promise<Employee | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: string, data: Partial<InsertEmployee>): Promise<Employee | undefined>;
 
@@ -140,6 +141,12 @@ export class DatabaseStorage implements IStorage {
 
   async getEmployeesByCompany(companyId: string): Promise<Employee[]> {
     return db.select().from(employees).where(eq(employees.companyId, companyId));
+  }
+
+  async getDemoEmployee(): Promise<Employee | undefined> {
+    // Return Sarah Chen (the first seeded employee) for demo mode
+    const [employee] = await db.select().from(employees).where(eq(employees.email, "sarah@copilot.io"));
+    return employee;
   }
 
   async createEmployee(employee: InsertEmployee): Promise<Employee> {

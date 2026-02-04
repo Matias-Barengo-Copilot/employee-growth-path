@@ -62,8 +62,16 @@ function AuthenticatedRouter() {
   );
 }
 
+// Demo mode - set to true to bypass authentication for demos
+const DEMO_MODE = true;
+
 function Router() {
   const { user, isLoading } = useAuth();
+
+  // In demo mode, skip auth check and go straight to app
+  if (DEMO_MODE) {
+    return <AuthenticatedRouter />;
+  }
 
   if (isLoading) {
     return (

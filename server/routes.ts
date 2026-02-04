@@ -23,7 +23,18 @@ interface AuthenticatedRequest extends Request {
   employee?: Employee;
 }
 
+// Demo mode - set to true to bypass authentication
+const DEMO_MODE = true;
+
 async function ensureEmployee(req: AuthenticatedRequest, res: Response): Promise<Employee | null> {
+  // In demo mode, return the first employee (Sarah Chen - CEO)
+  if (DEMO_MODE) {
+    const demoEmployee = await storage.getDemoEmployee();
+    if (demoEmployee) {
+      return demoEmployee;
+    }
+  }
+
   const authUser = req.user as AuthUser;
   
   if (!authUser?.claims?.sub) {
