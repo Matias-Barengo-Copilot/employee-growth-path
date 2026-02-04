@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import type { User, Employee } from "@shared/schema";
+import { setupAuth } from "./replit_integrations/auth";
 
 declare module "express-session" {
   interface SessionData {
@@ -39,9 +40,9 @@ async function ensureEmployee(req: AuthenticatedRequest, res: Response): Promise
     employee = await storage.createEmployee({
       userId: user.id,
       companyId: defaultCompany.id,
-      email: user.email || `${user.username}@copilot.io`,
-      firstName: user.firstName || user.username,
-      lastName: user.lastName || "",
+      email: user.email || `user-${user.id}@copilot.io`,
+      firstName: user.firstName || "New",
+      lastName: user.lastName || "User",
       profileImageUrl: user.profileImageUrl,
       role: "member",
     });
@@ -54,6 +55,8 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Setup Replit Auth before other routes
+  await setupAuth(app);
 
   app.get("/api/profile", async (req: AuthenticatedRequest, res) => {
     const employee = await ensureEmployee(req, res);
