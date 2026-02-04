@@ -5,24 +5,35 @@ import { z } from "zod";
 import type { User, Employee } from "@shared/schema";
 import { setupAuth } from "./replit_integrations/auth";
 
-declare module "express-session" {
-  interface SessionData {
-    userId?: string;
-  }
+interface AuthUser {
+  claims?: {
+    sub: string;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    profile_image_url?: string;
+  };
+  access_token?: string;
+  refresh_token?: string;
+  expires_at?: number;
 }
 
 interface AuthenticatedRequest extends Request {
-  user?: User;
+  user?: AuthUser;
   employee?: Employee;
 }
 
 async function ensureEmployee(req: AuthenticatedRequest, res: Response): Promise<Employee | null> {
-  if (!req.session?.userId) {
+  const authUser = req.user as AuthUser;
+  
+  if (!authUser?.claims?.sub) {
     res.status(401).json({ error: "Unauthorized" });
     return null;
   }
 
-  const user = await storage.getUser(req.session.userId);
+  const userId = authUser.claims.sub;
+  const user = await storage.getUser(userId);
+  
   if (!user) {
     res.status(401).json({ error: "User not found" });
     return null;
