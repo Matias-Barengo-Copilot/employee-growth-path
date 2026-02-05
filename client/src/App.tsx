@@ -18,6 +18,8 @@ import EmployeeProfile from "@/pages/employee-profile";
 import Goals from "@/pages/goals";
 import Snaps from "@/pages/snaps";
 import FeedbackPage from "@/pages/feedback";
+import Profile from "@/pages/profile";
+import ActivityFeed from "@/pages/activity";
 import Settings from "@/pages/settings";
 import type { Employee } from "@shared/schema";
 
@@ -56,6 +58,8 @@ function AuthenticatedRouter() {
         <Route path="/goals" component={Goals} />
         <Route path="/snaps" component={Snaps} />
         <Route path="/feedback" component={FeedbackPage} />
+        <Route path="/profile" component={Profile} />
+        <Route path="/activity" component={ActivityFeed} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { companies, teams, employees, goals, snaps, feedbackRequests, feedback } from "@shared/schema";
+import { companies, teams, employees, goals, snaps, feedbackRequests, feedback, activities } from "@shared/schema";
 import { sql } from "drizzle-orm";
 
 export async function seedDatabase() {
@@ -272,6 +272,20 @@ export async function seedDatabase() {
     { senderId: rachel, recipientId: maya, companyId: cid, requestId: null, keepDoing: "Maya, the new benefits package you put together is incredible. Everyone on the sales team has been raving about it. Your responsiveness to employee concerns is remarkable - you always follow up within a day.", considerImproving: "The onboarding documentation could use some updates for remote employees. A few of the links in the welcome packet are outdated, and it would help to have a clearer first-week schedule for remote starters.", tags: ["responsiveness", "employee-experience"], isAnonymous: false, isRead: true, createdAt: hoursAgo(96) },
   ]);
   console.log("Created sample feedback requests and feedback");
+
+  await db.insert(activities).values([
+    { companyId: cid, actorId: alex, type: "snap_sent" as const, targetId: david, metadata: JSON.stringify({ recipientName: "David Park", tags: ["innovation", "technical-skills"] }), createdAt: hoursAgo(12) },
+    { companyId: cid, actorId: sarah, type: "goal_created" as const, metadata: JSON.stringify({ goalTitle: "Launch Series A fundraising strategy", category: "delivery" }), createdAt: hoursAgo(24) },
+    { companyId: cid, actorId: marcus, type: "snap_sent" as const, targetId: alex, metadata: JSON.stringify({ recipientName: "Alex Rivera", tags: ["collaboration"] }), createdAt: hoursAgo(36) },
+    { companyId: cid, actorId: priya, type: "goal_completed" as const, metadata: JSON.stringify({ goalTitle: "Finalize Q1 product roadmap", category: "delivery" }), createdAt: hoursAgo(48) },
+    { companyId: cid, actorId: jordan, type: "feedback_given" as const, targetId: david, metadata: JSON.stringify({ recipientName: "David Park", isAnonymous: false }), createdAt: hoursAgo(72) },
+    { companyId: cid, actorId: maya, type: "feedback_requested" as const, targetId: rachel, metadata: JSON.stringify({ responderName: "Rachel Torres" }), createdAt: hoursAgo(48) },
+    { companyId: cid, actorId: sarah, type: "snap_sent" as const, targetId: marcus, metadata: JSON.stringify({ recipientName: "Marcus Johnson", tags: ["leadership", "above-and-beyond"] }), createdAt: hoursAgo(96) },
+    { companyId: cid, actorId: david, type: "profile_updated" as const, metadata: JSON.stringify({ employeeName: "David Park" }), createdAt: hoursAgo(120) },
+    { companyId: cid, actorId: rachel, type: "snap_sent" as const, targetId: maya, metadata: JSON.stringify({ recipientName: "Maya Patel", tags: ["responsiveness", "employee-experience"] }), createdAt: hoursAgo(96) },
+    { companyId: cid, actorId: marcus, type: "goal_created" as const, metadata: JSON.stringify({ goalTitle: "Scale engineering team to 15 engineers", category: "leadership" }), createdAt: hoursAgo(168) },
+  ]);
+  console.log("Created sample activities");
 
   console.log("Database seeded successfully!");
 }

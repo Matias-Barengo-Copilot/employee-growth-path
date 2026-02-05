@@ -10,6 +10,10 @@ export const goalCategoryEnum = pgEnum("goal_category", ["growth", "delivery", "
 export const goalStatusEnum = pgEnum("goal_status", ["not_started", "on_track", "at_risk", "completed"]);
 export const goalVisibilityEnum = pgEnum("goal_visibility", ["private", "manager", "team"]);
 export const feedbackStatusEnum = pgEnum("feedback_status", ["pending", "completed"]);
+export const activityTypeEnum = pgEnum("activity_type", [
+  "snap_sent", "goal_created", "goal_completed", "feedback_given", 
+  "feedback_requested", "profile_updated", "member_joined"
+]);
 
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -103,6 +107,16 @@ export const feedback = pgTable("feedback", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const activities = pgTable("activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  actorId: varchar("actor_id").notNull().references(() => employees.id),
+  type: activityTypeEnum("type").notNull(),
+  targetId: varchar("target_id"),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 import { users } from "./models/auth";
 
 export const companiesRelations = relations(companies, ({ many }) => ({
@@ -151,6 +165,11 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
   request: one(feedbackRequests, { fields: [feedback.requestId], references: [feedbackRequests.id] }),
 }));
 
+export const activitiesRelations = relations(activities, ({ one }) => ({
+  actor: one(employees, { fields: [activities.actorId], references: [employees.id] }),
+  company: one(companies, { fields: [activities.companyId], references: [companies.id] }),
+}));
+
 export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true, updatedAt: true });
@@ -158,6 +177,7 @@ export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, creat
 export const insertSnapSchema = createInsertSchema(snaps).omit({ id: true, createdAt: true });
 export const insertFeedbackRequestSchema = createInsertSchema(feedbackRequests).omit({ id: true, createdAt: true });
 export const insertFeedbackSchema = createInsertSchema(feedback).omit({ id: true, createdAt: true });
+export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
@@ -173,3 +193,5 @@ export type FeedbackRequest = typeof feedbackRequests.$inferSelect;
 export type InsertFeedbackRequest = z.infer<typeof insertFeedbackRequestSchema>;
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;

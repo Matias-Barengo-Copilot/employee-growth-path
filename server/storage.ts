@@ -17,6 +17,8 @@ import {
   type InsertFeedbackRequest,
   type Feedback,
   type InsertFeedback,
+  type Activity,
+  type InsertActivity,
   users,
   companies,
   teams,
@@ -25,6 +27,7 @@ import {
   snaps,
   feedbackRequests,
   feedback,
+  activities,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -68,6 +71,9 @@ export interface IStorage {
   getFeedbackBySender(senderId: string): Promise<Feedback[]>;
   createFeedback(fb: InsertFeedback): Promise<Feedback>;
   markFeedbackAsRead(id: string): Promise<void>;
+
+  getActivitiesByCompany(companyId: string, limit?: number): Promise<Activity[]>;
+  createActivity(activity: InsertActivity): Promise<Activity>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -244,6 +250,18 @@ export class DatabaseStorage implements IStorage {
 
   async markFeedbackAsRead(id: string): Promise<void> {
     await db.update(feedback).set({ isRead: true }).where(eq(feedback.id, id));
+  }
+
+  async getActivitiesByCompany(companyId: string, limit: number = 50): Promise<Activity[]> {
+    return db.select().from(activities)
+      .where(eq(activities.companyId, companyId))
+      .orderBy(desc(activities.createdAt))
+      .limit(limit);
+  }
+
+  async createActivity(activity: InsertActivity): Promise<Activity> {
+    const [newActivity] = await db.insert(activities).values(activity).returning();
+    return newActivity;
   }
 }
 

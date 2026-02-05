@@ -7,7 +7,12 @@ import {
   Users,
   ArrowRight,
   TrendingUp,
-  Clock
+  Clock,
+  Activity,
+  CheckCircle2,
+  Send,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +21,14 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
 import { SnapCard } from "@/components/snap-card";
-import type { Employee, Goal, Snap, FeedbackRequest } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
+import type { Employee, Goal, Snap, FeedbackRequest, Activity as ActivityType } from "@shared/schema";
+
+interface EnrichedActivity extends ActivityType {
+  actor?: Employee;
+  target?: Employee;
+  parsedMetadata: Record<string, unknown>;
+}
 
 interface DashboardData {
   employee: Employee | null;
@@ -31,9 +43,46 @@ interface DashboardData {
   };
 }
 
+const activityIcons: Record<string, { icon: typeof Sparkles; color: string }> = {
+  snap_sent: { icon: Sparkles, color: "text-amber-500" },
+  goal_created: { icon: Target, color: "text-green-500" },
+  goal_completed: { icon: CheckCircle2, color: "text-blue-500" },
+  feedback_given: { icon: MessageSquare, color: "text-purple-500" },
+  feedback_requested: { icon: Send, color: "text-indigo-500" },
+  profile_updated: { icon: UserCheck, color: "text-teal-500" },
+  member_joined: { icon: UserPlus, color: "text-primary" },
+};
+
+function getActivityText(activity: EnrichedActivity): string {
+  const actorName = activity.actor ? `${activity.actor.firstName}` : "Someone";
+  const meta = activity.parsedMetadata;
+  switch (activity.type) {
+    case "snap_sent":
+      return `${actorName} recognized ${(meta.recipientName as string) || "a teammate"}`;
+    case "goal_created":
+      return `${actorName} created a goal: ${(meta.goalTitle as string) || ""}`;
+    case "goal_completed":
+      return `${actorName} completed: ${(meta.goalTitle as string) || ""}`;
+    case "feedback_given":
+      return meta.isAnonymous ? `Someone shared anonymous feedback` : `${actorName} shared feedback`;
+    case "feedback_requested":
+      return `${actorName} requested feedback`;
+    case "profile_updated":
+      return `${actorName} updated their profile`;
+    case "member_joined":
+      return `${actorName} joined the team`;
+    default:
+      return `${actorName} did something`;
+  }
+}
+
 export default function Home() {
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
+  });
+
+  const { data: activitiesData } = useQuery<{ activities: EnrichedActivity[] }>({
+    queryKey: ["/api/activities?limit=8"],
   });
 
   if (isLoading) {
@@ -208,6 +257,48 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="text-base">Recent Activity</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/activity">
+                View all
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {!activitiesData?.activities || activitiesData.activities.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Activity className="h-10 w-10 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground mb-1">No activity yet</p>
+                <p className="text-xs text-muted-foreground">
+                  Activity will appear here as your team uses the app
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1" data-testid="dashboard-activity-feed">
+                {activitiesData.activities.slice(0, 5).map((activity) => {
+                  const iconConfig = activityIcons[activity.type] || activityIcons.member_joined;
+                  const Icon = iconConfig.icon;
+                  const timeAgo = activity.createdAt
+                    ? formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })
+                    : "";
+                  return (
+                    <div key={activity.id} className="flex items-center gap-3 py-2">
+                      <Icon className={`h-4 w-4 shrink-0 ${iconConfig.color}`} />
+                      <p className="text-sm flex-1 min-w-0 truncate">
+                        {getActivityText(activity)}
+                      </p>
+                      <span className="text-xs text-muted-foreground shrink-0">{timeAgo}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Link href="/directory">

@@ -7,7 +7,9 @@ import {
   MessageSquare, 
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Activity,
+  UserCircle
 } from "lucide-react";
 import {
   Sidebar,
@@ -30,6 +32,7 @@ const navItems = [
   { title: "Goals", url: "/goals", icon: Target },
   { title: "Snaps", url: "/snaps", icon: Sparkles },
   { title: "Feedback", url: "/feedback", icon: MessageSquare },
+  { title: "Activity", url: "/activity", icon: Activity },
 ];
 
 interface AppSidebarProps {
@@ -123,6 +126,14 @@ export function AppSidebar({ currentEmployee }: AppSidebarProps) {
           </div>
         </div>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild data-testid="nav-profile">
+              <Link href="/profile">
+                <UserCircle className="h-4 w-4" />
+                <span>My Profile</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild data-testid="nav-settings">
               <Link href="/settings">

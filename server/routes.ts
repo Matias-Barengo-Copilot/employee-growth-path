@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import type { User, Employee } from "@shared/schema";
+import type { User, Employee, Activity } from "@shared/schema";
 import { setupAuth } from "./replit_integrations/auth";
 
 interface AuthUser {
@@ -100,6 +100,7 @@ export async function registerRoutes(
       currentlyWorkingOn: z.string().optional(),
       strengths: z.array(z.string()).optional(),
       funFacts: z.array(z.string()).optional(),
+      profileImageUrl: z.string().optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -108,6 +109,14 @@ export async function registerRoutes(
     }
 
     const updated = await storage.updateEmployee(employee.id, parsed.data);
+
+    await storage.createActivity({
+      companyId: employee.companyId,
+      actorId: employee.id,
+      type: "profile_updated",
+      metadata: JSON.stringify({ employeeName: `${employee.firstName} ${employee.lastName}` }),
+    });
+
     res.json(updated);
   });
 
@@ -226,6 +235,14 @@ export async function registerRoutes(
       companyId: employee.companyId,
     });
 
+    await storage.createActivity({
+      companyId: employee.companyId,
+      actorId: employee.id,
+      type: "goal_created",
+      targetId: goal.id,
+      metadata: JSON.stringify({ goalTitle: goal.title, category: goal.category }),
+    });
+
     res.status(201).json(goal);
   });
 
@@ -254,6 +271,17 @@ export async function registerRoutes(
     }
 
     const updated = await storage.updateGoal(goal.id, parsed.data);
+
+    if (parsed.data.status === "completed" && goal.status !== "completed") {
+      await storage.createActivity({
+        companyId: employee.companyId,
+        actorId: employee.id,
+        type: "goal_completed",
+        targetId: goal.id,
+        metadata: JSON.stringify({ goalTitle: goal.title, category: goal.category }),
+      });
+    }
+
     res.json(updated);
   });
 
@@ -322,6 +350,14 @@ export async function registerRoutes(
       companyId: employee.companyId,
       message: parsed.data.message,
       tags: parsed.data.tags || [],
+    });
+
+    await storage.createActivity({
+      companyId: employee.companyId,
+      actorId: employee.id,
+      type: "snap_sent",
+      targetId: parsed.data.recipientId,
+      metadata: JSON.stringify({ recipientName: `${recipient.firstName} ${recipient.lastName}`, tags: parsed.data.tags }),
     });
 
     res.status(201).json(snap);
@@ -405,6 +441,14 @@ export async function registerRoutes(
       await storage.updateFeedbackRequestStatus(parsed.data.requestId, "completed");
     }
 
+    await storage.createActivity({
+      companyId: employee.companyId,
+      actorId: employee.id,
+      type: "feedback_given",
+      targetId: parsed.data.recipientId,
+      metadata: JSON.stringify({ recipientName: `${recipient.firstName} ${recipient.lastName}`, isAnonymous: parsed.data.isAnonymous }),
+    });
+
     res.status(201).json(fb);
   });
 
@@ -445,7 +489,34 @@ export async function registerRoutes(
       status: "pending",
     });
 
+    await storage.createActivity({
+      companyId: employee.companyId,
+      actorId: employee.id,
+      type: "feedback_requested",
+      targetId: parsed.data.responderId,
+      metadata: JSON.stringify({ responderName: `${responder.firstName} ${responder.lastName}` }),
+    });
+
     res.status(201).json(request);
+  });
+
+  app.get("/api/activities", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const limit = parseInt(req.query.limit as string) || 50;
+    const activitiesData = await storage.getActivitiesByCompany(employee.companyId, limit);
+    const companyEmployees = await storage.getEmployeesByCompany(employee.companyId);
+    const employeeMap = new Map(companyEmployees.map(e => [e.id, e]));
+
+    const enriched = activitiesData.map(activity => ({
+      ...activity,
+      actor: employeeMap.get(activity.actorId),
+      target: activity.targetId ? employeeMap.get(activity.targetId) : undefined,
+      parsedMetadata: activity.metadata ? JSON.parse(activity.metadata) : {},
+    }));
+
+    res.json({ activities: enriched });
   });
 
   return httpServer;
