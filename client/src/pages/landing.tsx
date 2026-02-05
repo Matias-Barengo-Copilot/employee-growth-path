@@ -70,8 +70,9 @@ export default function Landing() {
               </div>
               
               <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                Your team's
-                <span className="text-primary"> work companion</span>
+                AI that works for
+                <span className="border-b-4 border-primary"> humans</span>,
+                <br />not the other way around
               </h1>
               
               <p className="mb-8 text-lg text-muted-foreground md:text-xl">
@@ -104,7 +105,7 @@ export default function Landing() {
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center mb-12">
               <h2 className="text-3xl font-bold tracking-tight mb-4">
-                Everything your team needs
+                How we drive <span className="border-b-4 border-primary">impact</span>
               </h2>
               <p className="text-muted-foreground">
                 A complete toolkit for building stronger teams and driving professional growth.
