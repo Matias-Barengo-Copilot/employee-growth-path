@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import copilotLogo from "@assets/copilot_logo_small_1770328812971.png";
 import { Button } from "@/components/ui/button";
 import { 
   Users, 
@@ -45,9 +46,7 @@ export default function Landing() {
       <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
-              C
-            </div>
+            <img src={copilotLogo} alt="Copilot" className="h-9 w-9" />
             <span className="font-semibold text-lg">Copilot</span>
           </div>
           <Button asChild data-testid="button-login">
@@ -153,9 +152,7 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
-                C
-              </div>
+              <img src={copilotLogo} alt="Copilot" className="h-6 w-6" />
               <span>Copilot Innovations</span>
             </div>
             <p className="text-sm text-muted-foreground">

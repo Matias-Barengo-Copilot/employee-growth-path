@@ -1,4 +1,5 @@
 import { useLocation, Link } from "wouter";
+import copilotLogo from "@assets/copilot_logo_small_1770328812971.png";
 import { 
   Users, 
   Target, 
@@ -67,9 +68,7 @@ export function AppSidebar({ currentEmployee }: AppSidebarProps) {
     <Sidebar>
       <SidebarHeader className="p-4">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
-            C
-          </div>
+          <img src={copilotLogo} alt="Copilot" className="h-9 w-9" />
           <div className="flex flex-col">
             <span className="font-semibold text-sm">Copilot</span>
             <span className="text-xs text-muted-foreground">Innovations</span>
