@@ -61,7 +61,7 @@ export function AppSidebar({ currentEmployee }: AppSidebarProps) {
   };
 
   const getProfileImage = () => {
-    return currentEmployee?.profileImageUrl || user?.profileImageUrl;
+    return currentEmployee?.profileImageUrl || user?.profileImageUrl || undefined;
   };
 
   return (
