@@ -9,7 +9,8 @@ import {
   LogOut,
   ChevronRight,
   Activity,
-  UserCircle
+  UserCircle,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ const navItems = [
   { title: "Snaps", url: "/snaps", icon: Sparkles },
   { title: "Feedback", url: "/feedback", icon: MessageSquare },
   { title: "Activity", url: "/activity", icon: Activity },
+  { title: "Career", url: "/career", icon: TrendingUp },
 ];
 
 interface AppSidebarProps {

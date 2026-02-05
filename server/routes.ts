@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import type { User, Employee, Activity } from "@shared/schema";
+import type { User, Employee, Activity, CareerPath, Milestone, MilestoneStep } from "@shared/schema";
 import { setupAuth } from "./replit_integrations/auth";
 
 interface AuthUser {
@@ -519,5 +519,415 @@ export async function registerRoutes(
     res.json({ activities: enriched });
   });
 
+  // ==================== CAREER GROWTH ROUTES ====================
+
+  app.get("/api/career", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    let careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath) {
+      careerPath = await storage.createCareerPath({
+        employeeId: employee.id,
+        companyId: employee.companyId,
+      });
+    }
+
+    const pathMilestones = await storage.getMilestonesByCareerPath(careerPath.id);
+    const allSteps: Record<string, MilestoneStep[]> = {};
+    for (const m of pathMilestones) {
+      allSteps[m.id] = await storage.getStepsByMilestone(m.id);
+    }
+
+    const journalEntryList = await storage.getJournalEntriesByEmployee(employee.id);
+    const assessments = await storage.getSkillAssessmentsByEmployee(employee.id);
+
+    const completedMilestones = pathMilestones.filter(m => m.status === "completed").length;
+    const totalSteps = Object.values(allSteps).flat();
+    const completedSteps = totalSteps.filter(s => s.isCompleted).length;
+    const journalCount = journalEntryList.length;
+
+    const badges = computeBadges(completedMilestones, careerPath.currentStreak, careerPath.longestStreak, journalCount, assessments.length, pathMilestones, completedSteps);
+
+    res.json({
+      careerPath,
+      milestones: pathMilestones.map(m => ({
+        ...m,
+        steps: allSteps[m.id] || [],
+      })),
+      journalEntries: journalEntryList,
+      skillAssessments: assessments,
+      badges,
+      stats: {
+        totalMilestones: pathMilestones.length,
+        completedMilestones,
+        totalSteps: totalSteps.length,
+        completedSteps,
+        journalCount,
+        assessmentCount: assessments.length,
+      },
+    });
+  });
+
+  app.post("/api/career/milestones", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    let careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath) {
+      careerPath = await storage.createCareerPath({
+        employeeId: employee.id,
+        companyId: employee.companyId,
+      });
+    }
+
+    const schema = z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      phase: z.enum(["foundation", "growing", "leading", "mastering"]),
+      position: z.number().optional(),
+      xpReward: z.number().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
+    const existingMilestones = await storage.getMilestonesByCareerPath(careerPath.id);
+    const position = parsed.data.position ?? existingMilestones.filter(m => m.phase === parsed.data.phase).length;
+
+    const milestone = await storage.createMilestone({
+      careerPathId: careerPath.id,
+      phase: parsed.data.phase,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      status: "active",
+      position,
+      xpReward: parsed.data.xpReward ?? 50,
+    });
+
+    res.status(201).json(milestone);
+  });
+
+  app.patch("/api/career/milestones/:id", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const milestone = await storage.getMilestoneById(req.params.id);
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+
+    const careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath || milestone.careerPathId !== careerPath.id) {
+      return res.status(403).json({ error: "Not your milestone" });
+    }
+
+    const schema = z.object({
+      title: z.string().min(1).optional(),
+      description: z.string().optional(),
+      status: z.enum(["locked", "active", "completed"]).optional(),
+      position: z.number().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
+    const updateData: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.status === "completed" && milestone.status !== "completed") {
+      updateData.completedAt = new Date();
+      const newXp = careerPath.xp + milestone.xpReward;
+      const newPhase = getPhaseForXp(newXp);
+      await storage.updateCareerPath(careerPath.id, { xp: newXp, currentPhase: newPhase });
+    }
+
+    const updated = await storage.updateMilestone(milestone.id, updateData as any);
+    res.json(updated);
+  });
+
+  app.delete("/api/career/milestones/:id", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const milestone = await storage.getMilestoneById(req.params.id);
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+
+    const careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath || milestone.careerPathId !== careerPath.id) {
+      return res.status(403).json({ error: "Not your milestone" });
+    }
+
+    await storage.deleteMilestone(milestone.id);
+    res.status(204).send();
+  });
+
+  app.post("/api/career/milestones/:id/steps", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const milestone = await storage.getMilestoneById(req.params.id);
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+
+    const careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath || milestone.careerPathId !== careerPath.id) {
+      return res.status(403).json({ error: "Not your milestone" });
+    }
+
+    const schema = z.object({ title: z.string().min(1) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
+    const step = await storage.createMilestoneStep({
+      milestoneId: milestone.id,
+      title: parsed.data.title,
+    });
+
+    res.status(201).json(step);
+  });
+
+  app.patch("/api/career/steps/:id", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const step = await storage.getMilestoneStepById(req.params.id);
+    if (!step) return res.status(404).json({ error: "Step not found" });
+
+    const milestone = await storage.getMilestoneById(step.milestoneId);
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+
+    const careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath || milestone.careerPathId !== careerPath.id) {
+      return res.status(403).json({ error: "Not your step" });
+    }
+
+    const schema = z.object({
+      title: z.string().optional(),
+      isCompleted: z.boolean().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
+    const updateData: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.isCompleted === true && !step.isCompleted) {
+      updateData.completedAt = new Date();
+      const newXp = careerPath.xp + 10;
+      await storage.updateCareerPath(careerPath.id, { xp: newXp, currentPhase: getPhaseForXp(newXp) });
+    }
+
+    const updated = await storage.updateMilestoneStep(req.params.id, updateData as any);
+    res.json(updated);
+  });
+
+  app.delete("/api/career/steps/:id", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const step = await storage.getMilestoneStepById(req.params.id);
+    if (!step) return res.status(404).json({ error: "Step not found" });
+
+    const milestone = await storage.getMilestoneById(step.milestoneId);
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+
+    const careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath || milestone.careerPathId !== careerPath.id) {
+      return res.status(403).json({ error: "Not your step" });
+    }
+
+    await storage.deleteMilestoneStep(req.params.id);
+    res.status(204).send();
+  });
+
+  app.get("/api/career/journal", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+    const entries = await storage.getJournalEntriesByEmployee(employee.id);
+    res.json({ entries });
+  });
+
+  app.post("/api/career/journal", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const schema = z.object({
+      whatLearned: z.string().optional(),
+      whatAccomplished: z.string().optional(),
+      whatsNext: z.string().optional(),
+      milestoneId: z.string().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
+    if (!parsed.data.whatLearned && !parsed.data.whatAccomplished && !parsed.data.whatsNext) {
+      return res.status(400).json({ error: "Please fill in at least one field" });
+    }
+
+    const entry = await storage.createJournalEntry({
+      employeeId: employee.id,
+      companyId: employee.companyId,
+      milestoneId: parsed.data.milestoneId,
+      whatLearned: parsed.data.whatLearned,
+      whatAccomplished: parsed.data.whatAccomplished,
+      whatsNext: parsed.data.whatsNext,
+    });
+
+    let careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (careerPath) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const lastDate = careerPath.lastJournalDate ? new Date(careerPath.lastJournalDate) : null;
+      let newStreak = careerPath.currentStreak;
+
+      if (lastDate) {
+        lastDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          newStreak += 1;
+        } else if (diffDays > 1) {
+          newStreak = 1;
+        }
+      } else {
+        newStreak = 1;
+      }
+
+      const longestStreak = Math.max(careerPath.longestStreak, newStreak);
+      const newXp = careerPath.xp + 15;
+      await storage.updateCareerPath(careerPath.id, {
+        xp: newXp,
+        currentPhase: getPhaseForXp(newXp),
+        currentStreak: newStreak,
+        longestStreak,
+        lastJournalDate: new Date(),
+      });
+    }
+
+    res.status(201).json(entry);
+  });
+
+  app.get("/api/career/skills", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+    const assessments = await storage.getSkillAssessmentsByEmployee(employee.id);
+    res.json({ assessments });
+  });
+
+  app.post("/api/career/skills", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const schema = z.object({
+      dimensions: z.array(z.object({
+        name: z.string(),
+        score: z.number().min(1).max(10),
+      })).min(1),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
+    const assessment = await storage.createSkillAssessment({
+      employeeId: employee.id,
+      companyId: employee.companyId,
+      dimensions: parsed.data.dimensions,
+    });
+
+    let careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (careerPath) {
+      const newXp = careerPath.xp + 20;
+      await storage.updateCareerPath(careerPath.id, { xp: newXp, currentPhase: getPhaseForXp(newXp) });
+    }
+
+    res.status(201).json(assessment);
+  });
+
   return httpServer;
+}
+
+function getPhaseForXp(xp: number): "foundation" | "growing" | "leading" | "mastering" {
+  if (xp >= 1000) return "mastering";
+  if (xp >= 500) return "leading";
+  if (xp >= 200) return "growing";
+  return "foundation";
+}
+
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+  earnedAt?: string;
+}
+
+function computeBadges(
+  completedMilestones: number,
+  currentStreak: number,
+  longestStreak: number,
+  journalCount: number,
+  assessmentCount: number,
+  allMilestones: Milestone[],
+  completedSteps: number,
+): Badge[] {
+  return [
+    {
+      id: "first_milestone",
+      name: "First Steps",
+      description: "Complete your first milestone",
+      icon: "flag",
+      earned: completedMilestones >= 1,
+    },
+    {
+      id: "trailblazer",
+      name: "Trailblazer",
+      description: "Complete 5 milestones",
+      icon: "map",
+      earned: completedMilestones >= 5,
+    },
+    {
+      id: "summit_seeker",
+      name: "Summit Seeker",
+      description: "Complete 10 milestones",
+      icon: "mountain",
+      earned: completedMilestones >= 10,
+    },
+    {
+      id: "reflection_starter",
+      name: "Reflection Starter",
+      description: "Write your first journal entry",
+      icon: "book-open",
+      earned: journalCount >= 1,
+    },
+    {
+      id: "weekly_writer",
+      name: "Weekly Writer",
+      description: "Maintain a 7-day journal streak",
+      icon: "flame",
+      earned: longestStreak >= 7,
+    },
+    {
+      id: "month_of_growth",
+      name: "Month of Growth",
+      description: "Maintain a 30-day journal streak",
+      icon: "crown",
+      earned: longestStreak >= 30,
+    },
+    {
+      id: "step_master",
+      name: "Step Master",
+      description: "Complete 25 milestone steps",
+      icon: "check-check",
+      earned: completedSteps >= 25,
+    },
+    {
+      id: "skill_explorer",
+      name: "Skill Explorer",
+      description: "Complete your first skill assessment",
+      icon: "radar",
+      earned: assessmentCount >= 1,
+    },
+    {
+      id: "consistent_grower",
+      name: "Consistent Grower",
+      description: "Complete 3 skill assessments over time",
+      icon: "trending-up",
+      earned: assessmentCount >= 3,
+    },
+  ];
 }

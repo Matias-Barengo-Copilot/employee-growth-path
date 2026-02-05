@@ -1,5 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { Users, Target, Sparkles, Activity, Home } from "lucide-react";
+import { Users, Target, Sparkles, TrendingUp, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -7,7 +7,7 @@ const navItems = [
   { title: "Directory", url: "/directory", icon: Users },
   { title: "Goals", url: "/goals", icon: Target },
   { title: "Snaps", url: "/snaps", icon: Sparkles },
-  { title: "Activity", url: "/activity", icon: Activity },
+  { title: "Career", url: "/career", icon: TrendingUp },
 ];
 
 export function MobileNav() {

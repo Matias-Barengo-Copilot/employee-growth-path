@@ -1,4 +1,4 @@
-import { eq, and, desc, or } from "drizzle-orm";
+import { eq, and, desc, or, asc } from "drizzle-orm";
 import { db } from "./db";
 import {
   type User,
@@ -19,6 +19,16 @@ import {
   type InsertFeedback,
   type Activity,
   type InsertActivity,
+  type CareerPath,
+  type InsertCareerPath,
+  type Milestone,
+  type InsertMilestone,
+  type MilestoneStep,
+  type InsertMilestoneStep,
+  type JournalEntry,
+  type InsertJournalEntry,
+  type SkillAssessment,
+  type InsertSkillAssessment,
   users,
   companies,
   teams,
@@ -28,6 +38,11 @@ import {
   feedbackRequests,
   feedback,
   activities,
+  careerPaths,
+  milestones,
+  milestoneSteps,
+  journalEntries,
+  skillAssessments,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -74,6 +89,29 @@ export interface IStorage {
 
   getActivitiesByCompany(companyId: string, limit?: number): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
+
+  getCareerPathByEmployee(employeeId: string): Promise<CareerPath | undefined>;
+  createCareerPath(path: InsertCareerPath): Promise<CareerPath>;
+  updateCareerPath(id: string, data: Partial<InsertCareerPath>): Promise<CareerPath | undefined>;
+
+  getMilestonesByCareerPath(careerPathId: string): Promise<Milestone[]>;
+  getMilestoneById(id: string): Promise<Milestone | undefined>;
+  createMilestone(milestone: InsertMilestone): Promise<Milestone>;
+  updateMilestone(id: string, data: Partial<InsertMilestone>): Promise<Milestone | undefined>;
+  deleteMilestone(id: string): Promise<void>;
+
+  getStepsByMilestone(milestoneId: string): Promise<MilestoneStep[]>;
+  getMilestoneStepById(id: string): Promise<MilestoneStep | undefined>;
+  createMilestoneStep(step: InsertMilestoneStep): Promise<MilestoneStep>;
+  updateMilestoneStep(id: string, data: Partial<InsertMilestoneStep>): Promise<MilestoneStep | undefined>;
+  deleteMilestoneStep(id: string): Promise<void>;
+
+  getJournalEntriesByEmployee(employeeId: string): Promise<JournalEntry[]>;
+  getJournalEntriesByMilestone(milestoneId: string): Promise<JournalEntry[]>;
+  createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry>;
+
+  getSkillAssessmentsByEmployee(employeeId: string): Promise<SkillAssessment[]>;
+  createSkillAssessment(assessment: InsertSkillAssessment): Promise<SkillAssessment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -262,6 +300,90 @@ export class DatabaseStorage implements IStorage {
   async createActivity(activity: InsertActivity): Promise<Activity> {
     const [newActivity] = await db.insert(activities).values(activity).returning();
     return newActivity;
+  }
+
+  async getCareerPathByEmployee(employeeId: string): Promise<CareerPath | undefined> {
+    const [path] = await db.select().from(careerPaths).where(eq(careerPaths.employeeId, employeeId));
+    return path;
+  }
+
+  async createCareerPath(path: InsertCareerPath): Promise<CareerPath> {
+    const [newPath] = await db.insert(careerPaths).values(path).returning();
+    return newPath;
+  }
+
+  async updateCareerPath(id: string, data: Partial<InsertCareerPath>): Promise<CareerPath | undefined> {
+    const [updated] = await db.update(careerPaths).set(data).where(eq(careerPaths.id, id)).returning();
+    return updated;
+  }
+
+  async getMilestonesByCareerPath(careerPathId: string): Promise<Milestone[]> {
+    return db.select().from(milestones).where(eq(milestones.careerPathId, careerPathId)).orderBy(asc(milestones.position));
+  }
+
+  async getMilestoneById(id: string): Promise<Milestone | undefined> {
+    const [milestone] = await db.select().from(milestones).where(eq(milestones.id, id));
+    return milestone;
+  }
+
+  async createMilestone(milestone: InsertMilestone): Promise<Milestone> {
+    const [newMilestone] = await db.insert(milestones).values(milestone).returning();
+    return newMilestone;
+  }
+
+  async updateMilestone(id: string, data: Partial<InsertMilestone>): Promise<Milestone | undefined> {
+    const [updated] = await db.update(milestones).set(data).where(eq(milestones.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMilestone(id: string): Promise<void> {
+    await db.delete(milestoneSteps).where(eq(milestoneSteps.milestoneId, id));
+    await db.delete(milestones).where(eq(milestones.id, id));
+  }
+
+  async getStepsByMilestone(milestoneId: string): Promise<MilestoneStep[]> {
+    return db.select().from(milestoneSteps).where(eq(milestoneSteps.milestoneId, milestoneId)).orderBy(asc(milestoneSteps.createdAt));
+  }
+
+  async getMilestoneStepById(id: string): Promise<MilestoneStep | undefined> {
+    const [step] = await db.select().from(milestoneSteps).where(eq(milestoneSteps.id, id));
+    return step;
+  }
+
+  async createMilestoneStep(step: InsertMilestoneStep): Promise<MilestoneStep> {
+    const [newStep] = await db.insert(milestoneSteps).values(step).returning();
+    return newStep;
+  }
+
+  async updateMilestoneStep(id: string, data: Partial<InsertMilestoneStep>): Promise<MilestoneStep | undefined> {
+    const [updated] = await db.update(milestoneSteps).set(data).where(eq(milestoneSteps.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMilestoneStep(id: string): Promise<void> {
+    await db.delete(milestoneSteps).where(eq(milestoneSteps.id, id));
+  }
+
+  async getJournalEntriesByEmployee(employeeId: string): Promise<JournalEntry[]> {
+    return db.select().from(journalEntries).where(eq(journalEntries.employeeId, employeeId)).orderBy(desc(journalEntries.createdAt));
+  }
+
+  async getJournalEntriesByMilestone(milestoneId: string): Promise<JournalEntry[]> {
+    return db.select().from(journalEntries).where(eq(journalEntries.milestoneId, milestoneId)).orderBy(desc(journalEntries.createdAt));
+  }
+
+  async createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry> {
+    const [newEntry] = await db.insert(journalEntries).values(entry).returning();
+    return newEntry;
+  }
+
+  async getSkillAssessmentsByEmployee(employeeId: string): Promise<SkillAssessment[]> {
+    return db.select().from(skillAssessments).where(eq(skillAssessments.employeeId, employeeId)).orderBy(desc(skillAssessments.createdAt));
+  }
+
+  async createSkillAssessment(assessment: InsertSkillAssessment): Promise<SkillAssessment> {
+    const [newAssessment] = await db.insert(skillAssessments).values(assessment).returning();
+    return newAssessment;
   }
 }
 
