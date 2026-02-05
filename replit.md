@@ -53,6 +53,18 @@ The schema uses PostgreSQL with these core entities:
 - **Goals** - Personal objectives with category, status, and progress tracking
 - **Snaps** - Recognition messages between employees
 - **Feedback/FeedbackRequests** - Structured feedback with anonymous option
+- **CareerPaths** - One per employee, tracks XP, phase (foundation/growing/leading/mastering), streaks
+- **Milestones** - Career milestones grouped by phase with XP rewards and status tracking
+- **MilestoneSteps** - Checklist items within milestones (10 XP each on completion)
+- **JournalEntries** - Progress journal entries (15 XP each, feed streak tracking)
+- **SkillAssessments** - Self-assessment with multi-dimension scoring (20 XP each)
+
+### Career Growth System
+- XP thresholds: Foundation (0-200), Growing (200-500), Leading (500-1000), Mastering (1000+)
+- 9 achievement badges computed dynamically from activity metrics
+- Phase auto-recalculates on all XP-earning actions
+- Ownership validation on all career resource mutations
+- Demo mode (DEMO_MODE=true) bypasses auth, uses Sarah Chen as demo user
 
 ### Shared Code
 The `shared/` directory contains:
