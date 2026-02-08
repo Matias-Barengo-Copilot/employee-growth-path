@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { VoiceInput } from "@/components/voice-input";
 import {
   Select,
   SelectContent,
@@ -95,33 +96,42 @@ export function JournalDialog({ open, onOpenChange, milestones }: JournalDialogP
           )}
           <div className="space-y-2">
             <Label htmlFor="what-accomplished">What did you accomplish?</Label>
-            <Textarea
-              id="what-accomplished"
-              value={whatAccomplished}
-              onChange={(e) => setWhatAccomplished(e.target.value)}
-              placeholder="Describe what you achieved recently..."
-              data-testid="input-accomplished"
-            />
+            <div className="flex items-start gap-1">
+              <Textarea
+                id="what-accomplished"
+                value={whatAccomplished}
+                onChange={(e) => setWhatAccomplished(e.target.value)}
+                placeholder="Describe what you achieved recently..."
+                data-testid="input-accomplished"
+              />
+              <VoiceInput onTranscript={(text) => setWhatAccomplished(prev => prev ? `${prev} ${text}` : text)} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="what-learned">What did you learn?</Label>
-            <Textarea
-              id="what-learned"
-              value={whatLearned}
-              onChange={(e) => setWhatLearned(e.target.value)}
-              placeholder="New skills, insights, or realizations..."
-              data-testid="input-learned"
-            />
+            <div className="flex items-start gap-1">
+              <Textarea
+                id="what-learned"
+                value={whatLearned}
+                onChange={(e) => setWhatLearned(e.target.value)}
+                placeholder="New skills, insights, or realizations..."
+                data-testid="input-learned"
+              />
+              <VoiceInput onTranscript={(text) => setWhatLearned(prev => prev ? `${prev} ${text}` : text)} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="whats-next">What's next?</Label>
-            <Textarea
-              id="whats-next"
-              value={whatsNext}
-              onChange={(e) => setWhatsNext(e.target.value)}
-              placeholder="Goals or plans for your next steps..."
-              data-testid="input-whats-next"
-            />
+            <div className="flex items-start gap-1">
+              <Textarea
+                id="whats-next"
+                value={whatsNext}
+                onChange={(e) => setWhatsNext(e.target.value)}
+                placeholder="Goals or plans for your next steps..."
+                data-testid="input-whats-next"
+              />
+              <VoiceInput onTranscript={(text) => setWhatsNext(prev => prev ? `${prev} ${text}` : text)} />
+            </div>
           </div>
           <DialogFooter>
             <Button

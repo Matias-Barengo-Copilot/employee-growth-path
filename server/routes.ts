@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import type { User, Employee, Activity, CareerPath, Milestone, MilestoneStep } from "@shared/schema";
 import { setupAuth } from "./replit_integrations/auth";
+import { openai, ensureCompatibleFormat, speechToText } from "./replit_integrations/audio/client";
 
 interface AuthUser {
   claims?: {
@@ -835,6 +836,90 @@ export async function registerRoutes(
     }
 
     res.status(201).json(assessment);
+  });
+
+  app.post("/api/transcribe", async (req: Request, res: Response) => {
+    try {
+      const { audio } = req.body;
+      if (!audio || typeof audio !== "string") {
+        return res.status(400).json({ error: "Missing audio data" });
+      }
+      const audioBuffer = Buffer.from(audio, "base64");
+      const { buffer, format } = await ensureCompatibleFormat(audioBuffer);
+      const text = await speechToText(buffer, format);
+      res.json({ text });
+    } catch (error: any) {
+      console.error("Transcription error:", error);
+      res.status(500).json({ error: "Transcription failed" });
+    }
+  });
+
+  app.post("/api/coach", async (req: Request, res: Response) => {
+    try {
+      const { messages, context } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "Messages required" });
+      }
+
+      const employee = await storage.getDemoEmployee();
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      const employeeGoals = await storage.getGoalsByEmployee(employee.id);
+      const activeGoals = employeeGoals.filter(g => g.status !== "completed");
+
+      let contextInfo = `You are an AI career coach for ${employee.firstName} ${employee.lastName}, who works as ${employee.title || "a team member"}.`;
+      contextInfo += `\n\nTheir current goals:\n${activeGoals.map(g => `- ${g.title} (${g.category}, ${g.progress}% done)`).join("\n") || "No active goals yet."}`;
+
+      if (context?.page) {
+        const pageContextMap: Record<string, string> = {
+          goals: "The user is on the Goals page. Help them set meaningful goals, refine existing ones, or suggest SMART goals based on their role.",
+          career: "The user is on the Career Growth page. Help them plan career development, suggest milestones, and discuss growth strategies.",
+          feedback: "The user is on the Feedback page. Help them craft constructive feedback, prepare for giving/receiving feedback.",
+          snaps: "The user is on the Recognition page. Help them write meaningful recognition messages for teammates.",
+          home: "The user is on the Dashboard. Give them an overview of their progress and suggest next actions.",
+          directory: "The user is browsing the Team Directory. Help them understand team dynamics and collaboration opportunities.",
+        };
+        contextInfo += `\n\n${pageContextMap[context.page] || "Help the user with their professional development."}`;
+      }
+
+      const systemPrompt = `${contextInfo}
+
+You are a supportive, knowledgeable career coach. Keep responses concise (2-4 sentences unless asked for more detail). Be specific and actionable. Use a warm but professional tone. When suggesting goals, make them SMART (Specific, Measurable, Achievable, Relevant, Time-bound). Never use emoji.`;
+
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages.slice(-10),
+        ],
+        stream: true,
+        max_tokens: 500,
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+      res.write(`data: [DONE]\n\n`);
+      res.end();
+    } catch (error: any) {
+      console.error("Coach error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Coach unavailable" });
+      } else {
+        res.end();
+      }
+    }
   });
 
   return httpServer;

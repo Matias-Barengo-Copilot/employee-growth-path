@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Sparkles, Loader2, Search } from "lucide-react";
+import { VoiceInput } from "@/components/voice-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -209,15 +210,18 @@ export function GiveSnapDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Message</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="What would you like to recognize them for?"
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                      data-testid="input-snap-message"
-                    />
-                  </FormControl>
+                  <div className="flex items-start gap-1">
+                    <FormControl>
+                      <Textarea 
+                        placeholder="What would you like to recognize them for?"
+                        className="resize-none"
+                        rows={3}
+                        {...field}
+                        data-testid="input-snap-message"
+                      />
+                    </FormControl>
+                    <VoiceInput onTranscript={(text) => field.onChange(field.value ? `${field.value} ${text}` : text)} />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

@@ -11,6 +11,8 @@ Copilot is a mobile-first employee experience application designed for small age
 - **Peer Feedback** - Request and provide constructive feedback with anonymous options
 - **Dashboard** - Unified view of goals, recent activity, and pending actions
 - **Career Growth Journey** - Career map with milestones (4 phases), XP system, journal entries, skill radar chart, and achievement badges
+- **Voice Input** - Microphone buttons on text fields throughout the app (goals, journal, snaps, feedback) using OpenAI gpt-4o-mini-transcribe for speech-to-text
+- **AI Coach** - Floating contextual career coach (bottom-right button) that understands user role, goals, and current page to provide personalized guidance via streaming chat
 
 The application is built as a monorepo with a React frontend and Express backend, using PostgreSQL for data persistence and Replit Auth for authentication.
 

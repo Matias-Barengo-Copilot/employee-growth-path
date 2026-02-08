@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TrendingUp, Package, Users, BookOpen, Loader2 } from "lucide-react";
+import { VoiceInput } from "@/components/voice-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -107,13 +108,16 @@ export function CreateGoalDialog({ open, onOpenChange, onSubmit, goal }: CreateG
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="What do you want to achieve?" 
-                      {...field} 
-                      data-testid="input-goal-title"
-                    />
-                  </FormControl>
+                  <div className="flex items-center gap-1">
+                    <FormControl>
+                      <Input 
+                        placeholder="What do you want to achieve?" 
+                        {...field} 
+                        data-testid="input-goal-title"
+                      />
+                    </FormControl>
+                    <VoiceInput onTranscript={(text) => field.onChange(field.value ? `${field.value} ${text}` : text)} />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -125,15 +129,18 @@ export function CreateGoalDialog({ open, onOpenChange, onSubmit, goal }: CreateG
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Describe your goal in more detail..."
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                      data-testid="input-goal-description"
-                    />
-                  </FormControl>
+                  <div className="flex items-start gap-1">
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Describe your goal in more detail..."
+                        className="resize-none"
+                        rows={3}
+                        {...field}
+                        data-testid="input-goal-description"
+                      />
+                    </FormControl>
+                    <VoiceInput onTranscript={(text) => field.onChange(field.value ? `${field.value} ${text}` : text)} />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import copilotLogo from "@assets/copilot_logo_small_1770328812971.png";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -23,6 +23,7 @@ import ActivityFeed from "@/pages/activity";
 import Career from "@/pages/career";
 import Settings from "@/pages/settings";
 import type { Employee } from "@shared/schema";
+import { AICoach } from "@/components/ai-coach";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { data: currentEmployee } = useQuery<Employee>({
@@ -49,7 +50,16 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function getPageFromPath(path: string): string {
+  if (path === "/") return "home";
+  const segment = path.split("/")[1];
+  return segment || "home";
+}
+
 function AuthenticatedRouter() {
+  const [location] = useLocation();
+  const currentPage = getPageFromPath(location);
+
   return (
     <AuthenticatedLayout>
       <Switch>
@@ -65,6 +75,7 @@ function AuthenticatedRouter() {
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
+      <AICoach currentPage={currentPage} />
     </AuthenticatedLayout>
   );
 }

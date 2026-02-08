@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { MessageSquare, Loader2, Search, EyeOff } from "lucide-react";
+import { VoiceInput } from "@/components/voice-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -232,15 +233,18 @@ export function GiveFeedbackDialog({
                     <div className="h-2 w-2 rounded-full bg-green-500" />
                     Keep Doing
                   </FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="What should they continue doing? What's working well?"
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                      data-testid="input-keep-doing"
-                    />
-                  </FormControl>
+                  <div className="flex items-start gap-1">
+                    <FormControl>
+                      <Textarea 
+                        placeholder="What should they continue doing? What's working well?"
+                        className="resize-none"
+                        rows={3}
+                        {...field}
+                        data-testid="input-keep-doing"
+                      />
+                    </FormControl>
+                    <VoiceInput onTranscript={(text) => field.onChange(field.value ? `${field.value} ${text}` : text)} />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -255,15 +259,18 @@ export function GiveFeedbackDialog({
                     <div className="h-2 w-2 rounded-full bg-amber-500" />
                     Consider Improving
                   </FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="What could they do differently? What areas have room for growth?"
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                      data-testid="input-consider-improving"
-                    />
-                  </FormControl>
+                  <div className="flex items-start gap-1">
+                    <FormControl>
+                      <Textarea 
+                        placeholder="What could they do differently? What areas have room for growth?"
+                        className="resize-none"
+                        rows={3}
+                        {...field}
+                        data-testid="input-consider-improving"
+                      />
+                    </FormControl>
+                    <VoiceInput onTranscript={(text) => field.onChange(field.value ? `${field.value} ${text}` : text)} />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
