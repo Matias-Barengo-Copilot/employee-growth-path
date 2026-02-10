@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { User, Employee, Activity, CareerPath, Milestone, MilestoneStep } from "@shared/schema";
 import { setupAuth } from "./replit_integrations/auth";
 import { openai, ensureCompatibleFormat, speechToText } from "./replit_integrations/audio/client";
+import { awardXp, checkAndAwardVarietyBonus, checkAndAwardStreakBonus, getWeeklyXpSummary, getSeasonLevel, getCurrentSeason, type AwardXpResult } from "./xp-engine";
 
 interface AuthUser {
   claims?: {
@@ -244,7 +245,16 @@ export async function registerRoutes(
       metadata: JSON.stringify({ goalTitle: goal.title, category: goal.category }),
     });
 
-    res.status(201).json(goal);
+    const xpResult = await awardXp({
+      employee,
+      category: "goal_create",
+      targetId: goal.id,
+    });
+
+    await checkAndAwardVarietyBonus(employee);
+    await checkAndAwardStreakBonus(employee);
+
+    res.status(201).json({ ...goal, xpAwarded: xpResult.xpAwarded });
   });
 
   app.patch("/api/goals/:id", async (req: AuthenticatedRequest, res) => {
@@ -273,6 +283,7 @@ export async function registerRoutes(
 
     const updated = await storage.updateGoal(goal.id, parsed.data);
 
+    let xpAwarded = 0;
     if (parsed.data.status === "completed" && goal.status !== "completed") {
       await storage.createActivity({
         companyId: employee.companyId,
@@ -281,9 +292,27 @@ export async function registerRoutes(
         targetId: goal.id,
         metadata: JSON.stringify({ goalTitle: goal.title, category: goal.category }),
       });
+      const xpResult = await awardXp({
+        employee,
+        category: "goal_complete",
+        targetId: goal.id,
+      });
+      xpAwarded = xpResult.xpAwarded;
+    } else if (parsed.data.progress !== undefined || parsed.data.status !== undefined) {
+      const xpResult = await awardXp({
+        employee,
+        category: "goal_update",
+        targetId: goal.id,
+      });
+      xpAwarded = xpResult.xpAwarded;
     }
 
-    res.json(updated);
+    if (xpAwarded > 0) {
+      await checkAndAwardVarietyBonus(employee);
+      await checkAndAwardStreakBonus(employee);
+    }
+
+    res.json({ ...updated, xpAwarded });
   });
 
   app.delete("/api/goals/:id", async (req: AuthenticatedRequest, res) => {
@@ -361,7 +390,24 @@ export async function registerRoutes(
       metadata: JSON.stringify({ recipientName: `${recipient.firstName} ${recipient.lastName}`, tags: parsed.data.tags }),
     });
 
-    res.status(201).json(snap);
+    const senderXp = await awardXp({
+      employee,
+      category: "snap_give",
+      recipientId: parsed.data.recipientId,
+      targetId: snap.id,
+      contentLength: parsed.data.message.length,
+    });
+
+    const recipientXp = await awardXp({
+      employee: recipient,
+      category: "snap_receive",
+      targetId: snap.id,
+    });
+
+    await checkAndAwardVarietyBonus(employee);
+    await checkAndAwardStreakBonus(employee);
+
+    res.status(201).json({ ...snap, xpAwarded: senderXp.xpAwarded });
   });
 
   app.get("/api/feedback", async (req: AuthenticatedRequest, res) => {
@@ -450,7 +496,19 @@ export async function registerRoutes(
       metadata: JSON.stringify({ recipientName: `${recipient.firstName} ${recipient.lastName}`, isAnonymous: parsed.data.isAnonymous }),
     });
 
-    res.status(201).json(fb);
+    const totalContentLength = (parsed.data.keepDoing?.length || 0) + (parsed.data.considerImproving?.length || 0);
+    const xpResult = await awardXp({
+      employee,
+      category: "feedback_give",
+      recipientId: parsed.data.recipientId,
+      targetId: fb.id,
+      contentLength: totalContentLength,
+    });
+
+    await checkAndAwardVarietyBonus(employee);
+    await checkAndAwardStreakBonus(employee);
+
+    res.status(201).json({ ...fb, xpAwarded: xpResult.xpAwarded });
   });
 
   app.patch("/api/feedback/:id/read", async (req: AuthenticatedRequest, res) => {
@@ -498,7 +556,16 @@ export async function registerRoutes(
       metadata: JSON.stringify({ responderName: `${responder.firstName} ${responder.lastName}` }),
     });
 
-    res.status(201).json(request);
+    const xpResult = await awardXp({
+      employee,
+      category: "feedback_request",
+      targetId: request.id,
+    });
+
+    await checkAndAwardVarietyBonus(employee);
+    await checkAndAwardStreakBonus(employee);
+
+    res.status(201).json({ ...request, xpAwarded: xpResult.xpAwarded });
   });
 
   app.get("/api/activities", async (req: AuthenticatedRequest, res) => {
@@ -518,6 +585,40 @@ export async function registerRoutes(
     }));
 
     res.json({ activities: enriched });
+  });
+
+  // ==================== XP SUMMARY ====================
+
+  app.get("/api/xp/summary", async (req: AuthenticatedRequest, res) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    let careerPath = await storage.getCareerPathByEmployee(employee.id);
+    if (!careerPath) {
+      careerPath = await storage.createCareerPath({
+        employeeId: employee.id,
+        companyId: employee.companyId,
+      });
+    }
+
+    const season = getCurrentSeason();
+    const maybeResetSeason = (careerPath.seasonQuarter !== season.quarter || careerPath.seasonYear !== season.year);
+    const seasonXp = maybeResetSeason ? 0 : careerPath.seasonXp;
+
+    const level = getSeasonLevel(seasonXp);
+    const weeklySummary = await getWeeklyXpSummary(employee.id);
+
+    res.json({
+      seasonXp,
+      lifetimeXp: careerPath.lifetimeXp,
+      level,
+      weekly: weeklySummary,
+      season: {
+        quarter: season.quarter,
+        year: season.year,
+      },
+      consistencyStreak: careerPath.consistencyStreak,
+    });
   });
 
   // ==================== CAREER GROWTH ROUTES ====================
@@ -632,15 +733,22 @@ export async function registerRoutes(
     if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
     const updateData: Record<string, unknown> = { ...parsed.data };
+    let xpAwarded = 0;
     if (parsed.data.status === "completed" && milestone.status !== "completed") {
       updateData.completedAt = new Date();
-      const newXp = careerPath.xp + milestone.xpReward;
-      const newPhase = getPhaseForXp(newXp);
-      await storage.updateCareerPath(careerPath.id, { xp: newXp, currentPhase: newPhase });
+      const xpResult = await awardXp({
+        employee,
+        category: "milestone_complete",
+        targetId: milestone.id,
+        customXp: milestone.xpReward,
+      });
+      xpAwarded = xpResult.xpAwarded;
+      await checkAndAwardVarietyBonus(employee);
+      await checkAndAwardStreakBonus(employee);
     }
 
     const updated = await storage.updateMilestone(milestone.id, updateData as any);
-    res.json(updated);
+    res.json({ ...updated, xpAwarded });
   });
 
   app.delete("/api/career/milestones/:id", async (req: AuthenticatedRequest, res) => {
@@ -706,14 +814,21 @@ export async function registerRoutes(
     if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 
     const updateData: Record<string, unknown> = { ...parsed.data };
+    let xpAwarded = 0;
     if (parsed.data.isCompleted === true && !step.isCompleted) {
       updateData.completedAt = new Date();
-      const newXp = careerPath.xp + 10;
-      await storage.updateCareerPath(careerPath.id, { xp: newXp, currentPhase: getPhaseForXp(newXp) });
+      const xpResult = await awardXp({
+        employee,
+        category: "milestone_step",
+        targetId: step.id,
+      });
+      xpAwarded = xpResult.xpAwarded;
+      await checkAndAwardVarietyBonus(employee);
+      await checkAndAwardStreakBonus(employee);
     }
 
     const updated = await storage.updateMilestoneStep(req.params.id, updateData as any);
-    res.json(updated);
+    res.json({ ...updated, xpAwarded });
   });
 
   app.delete("/api/career/steps/:id", async (req: AuthenticatedRequest, res) => {
@@ -789,17 +904,23 @@ export async function registerRoutes(
       }
 
       const longestStreak = Math.max(careerPath.longestStreak, newStreak);
-      const newXp = careerPath.xp + 15;
       await storage.updateCareerPath(careerPath.id, {
-        xp: newXp,
-        currentPhase: getPhaseForXp(newXp),
         currentStreak: newStreak,
         longestStreak,
         lastJournalDate: new Date(),
       });
     }
 
-    res.status(201).json(entry);
+    const xpResult = await awardXp({
+      employee,
+      category: "journal",
+      targetId: entry.id,
+    });
+
+    await checkAndAwardVarietyBonus(employee);
+    await checkAndAwardStreakBonus(employee);
+
+    res.status(201).json({ ...entry, xpAwarded: xpResult.xpAwarded });
   });
 
   app.get("/api/career/skills", async (req: AuthenticatedRequest, res) => {
@@ -829,13 +950,16 @@ export async function registerRoutes(
       dimensions: parsed.data.dimensions,
     });
 
-    let careerPath = await storage.getCareerPathByEmployee(employee.id);
-    if (careerPath) {
-      const newXp = careerPath.xp + 20;
-      await storage.updateCareerPath(careerPath.id, { xp: newXp, currentPhase: getPhaseForXp(newXp) });
-    }
+    const xpResult = await awardXp({
+      employee,
+      category: "skill_assessment",
+      targetId: assessment.id,
+    });
 
-    res.status(201).json(assessment);
+    await checkAndAwardVarietyBonus(employee);
+    await checkAndAwardStreakBonus(employee);
+
+    res.status(201).json({ ...assessment, xpAwarded: xpResult.xpAwarded });
   });
 
   // ===== TIME OFF =====

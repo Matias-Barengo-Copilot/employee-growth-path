@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, jsonb, real, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -19,6 +19,14 @@ export const timeOffTypeEnum = pgEnum("time_off_type", ["vacation", "sick", "hal
 export const timeOffStatusEnum = pgEnum("time_off_status", ["pending", "approved", "declined"]);
 export const careerPhaseEnum = pgEnum("career_phase", ["foundation", "growing", "leading", "mastering"]);
 export const milestoneStatusEnum = pgEnum("milestone_status", ["locked", "active", "completed"]);
+export const xpCategoryEnum = pgEnum("xp_category", [
+  "snap_give", "snap_receive",
+  "feedback_give", "feedback_request", "feedback_helpful",
+  "goal_create", "goal_update", "goal_complete",
+  "milestone_complete", "milestone_step",
+  "journal", "skill_assessment",
+  "variety_bonus", "streak_bonus"
+]);
 
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -128,9 +136,16 @@ export const careerPaths = pgTable("career_paths", {
   companyId: varchar("company_id").notNull().references(() => companies.id),
   currentPhase: careerPhaseEnum("current_phase").notNull().default("foundation"),
   xp: integer("xp").notNull().default(0),
+  seasonXp: integer("season_xp").notNull().default(0),
+  lifetimeXp: integer("lifetime_xp").notNull().default(0),
+  seasonQuarter: integer("season_quarter").notNull().default(1),
+  seasonYear: integer("season_year").notNull().default(2026),
   currentStreak: integer("current_streak").notNull().default(0),
   longestStreak: integer("longest_streak").notNull().default(0),
   lastJournalDate: timestamp("last_journal_date"),
+  lastActiveWeek: text("last_active_week"),
+  weeklyActionCount: integer("weekly_action_count").notNull().default(0),
+  consistencyStreak: integer("consistency_streak").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -202,6 +217,20 @@ export const timeOffBalances = pgTable("time_off_balances", {
   sickUsed: integer("sick_used").notNull().default(0),
   personalTotal: integer("personal_total").notNull().default(3),
   personalUsed: integer("personal_used").notNull().default(0),
+});
+
+export const xpEvents = pgTable("xp_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  category: xpCategoryEnum("category").notNull(),
+  xpAwarded: integer("xp_awarded").notNull(),
+  recipientId: varchar("recipient_id"),
+  targetId: varchar("target_id"),
+  seasonQuarter: integer("season_quarter").notNull(),
+  seasonYear: integer("season_year").notNull(),
+  weekKey: text("week_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 import { users } from "./models/auth";
@@ -294,6 +323,11 @@ export const timeOffBalancesRelations = relations(timeOffBalances, ({ one }) => 
   company: one(companies, { fields: [timeOffBalances.companyId], references: [companies.id] }),
 }));
 
+export const xpEventsRelations = relations(xpEvents, ({ one }) => ({
+  employee: one(employees, { fields: [xpEvents.employeeId], references: [employees.id] }),
+  company: one(companies, { fields: [xpEvents.companyId], references: [companies.id] }),
+}));
+
 export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true });
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true, updatedAt: true });
@@ -309,6 +343,7 @@ export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit(
 export const insertSkillAssessmentSchema = createInsertSchema(skillAssessments).omit({ id: true, createdAt: true });
 export const insertTimeOffRequestSchema = createInsertSchema(timeOffRequests).omit({ id: true, createdAt: true });
 export const insertTimeOffBalanceSchema = createInsertSchema(timeOffBalances).omit({ id: true });
+export const insertXpEventSchema = createInsertSchema(xpEvents).omit({ id: true, createdAt: true });
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
@@ -340,3 +375,5 @@ export type TimeOffRequest = typeof timeOffRequests.$inferSelect;
 export type InsertTimeOffRequest = z.infer<typeof insertTimeOffRequestSchema>;
 export type TimeOffBalance = typeof timeOffBalances.$inferSelect;
 export type InsertTimeOffBalance = z.infer<typeof insertTimeOffBalanceSchema>;
+export type XpEvent = typeof xpEvents.$inferSelect;
+export type InsertXpEvent = z.infer<typeof insertXpEventSchema>;

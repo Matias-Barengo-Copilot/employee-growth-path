@@ -10,6 +10,7 @@ import { SnapCard } from "@/components/snap-card";
 import { EmptyState } from "@/components/empty-state";
 import { GiveSnapDialog } from "@/components/dialogs/give-snap-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useXpToast } from "@/hooks/use-xp-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Snap, Employee } from "@shared/schema";
 
@@ -27,6 +28,7 @@ export default function Snaps() {
   const searchParams = new URLSearchParams(search);
   const recipientParam = searchParams.get("recipient");
   const { toast } = useToast();
+  const { showXpToast } = useXpToast();
 
   const { data, isLoading } = useQuery<SnapsData>({
     queryKey: ["/api/snaps"],
@@ -40,15 +42,18 @@ export default function Snaps() {
 
   const createSnapMutation = useMutation({
     mutationFn: async (values: any) => {
-      return apiRequest("POST", "/api/snaps", values);
+      const res = await apiRequest("POST", "/api/snaps", values);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/snaps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ 
         title: "Snap sent!",
         description: "Your recognition has been delivered."
       });
+      showXpToast(data.xpAwarded, "Recognition given");
     },
     onError: () => {
       toast({ title: "Failed to send snap", variant: "destructive" });

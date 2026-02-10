@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useXpToast } from "@/hooks/use-xp-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CreateMilestoneDialogProps {
@@ -33,17 +34,21 @@ export function CreateMilestoneDialog({ open, onOpenChange, defaultPhase }: Crea
   const [description, setDescription] = useState("");
   const [phase, setPhase] = useState(defaultPhase);
   const { toast } = useToast();
+  const { showXpToast } = useXpToast();
 
   const createMutation = useMutation({
     mutationFn: async (values: { title: string; description?: string; phase: string }) => {
-      return apiRequest("POST", "/api/career/milestones", values);
+      const res = await apiRequest("POST", "/api/career/milestones", values);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/career"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Milestone created" });
       setTitle("");
       setDescription("");
       onOpenChange(false);
+      showXpToast(data.xpAwarded, "Milestone created");
     },
     onError: () => {
       toast({ title: "Failed to create milestone", variant: "destructive" });

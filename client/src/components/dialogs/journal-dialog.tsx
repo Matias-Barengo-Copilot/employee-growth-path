@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useXpToast } from "@/hooks/use-xp-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Milestone } from "@shared/schema";
 
@@ -35,19 +36,23 @@ export function JournalDialog({ open, onOpenChange, milestones }: JournalDialogP
   const [whatsNext, setWhatsNext] = useState("");
   const [milestoneId, setMilestoneId] = useState<string>("");
   const { toast } = useToast();
+  const { showXpToast } = useXpToast();
 
   const createMutation = useMutation({
     mutationFn: async (values: Record<string, string | undefined>) => {
-      return apiRequest("POST", "/api/career/journal", values);
+      const res = await apiRequest("POST", "/api/career/journal", values);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/career"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Journal entry saved" });
       setWhatAccomplished("");
       setWhatLearned("");
       setWhatsNext("");
       setMilestoneId("");
       onOpenChange(false);
+      showXpToast(data.xpAwarded, "Journal entry added");
     },
     onError: () => {
       toast({ title: "Failed to save entry", variant: "destructive" });

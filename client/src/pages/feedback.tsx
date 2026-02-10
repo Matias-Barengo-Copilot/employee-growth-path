@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/empty-state";
 import { GiveFeedbackDialog } from "@/components/dialogs/give-feedback-dialog";
 import { RequestFeedbackDialog } from "@/components/dialogs/request-feedback-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useXpToast } from "@/hooks/use-xp-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Feedback, FeedbackRequest, Employee } from "@shared/schema";
 
@@ -42,6 +43,7 @@ export default function FeedbackPage() {
   const searchParams = new URLSearchParams(search);
   const recipientParam = searchParams.get("recipient");
   const { toast } = useToast();
+  const { showXpToast } = useXpToast();
 
   const { data, isLoading } = useQuery<FeedbackData>({
     queryKey: ["/api/feedback"],
@@ -59,14 +61,17 @@ export default function FeedbackPage() {
 
   const createFeedbackMutation = useMutation({
     mutationFn: async (values: any) => {
-      return apiRequest("POST", "/api/feedback", values);
+      const res = await apiRequest("POST", "/api/feedback", values);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/feedback"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Feedback sent successfully" });
       setRespondingToRequest(null);
       setPreselectedRecipient(null);
+      showXpToast(data.xpAwarded, "Feedback shared");
     },
     onError: () => {
       toast({ title: "Failed to send feedback", variant: "destructive" });
@@ -75,11 +80,14 @@ export default function FeedbackPage() {
 
   const requestFeedbackMutation = useMutation({
     mutationFn: async (values: any) => {
-      return apiRequest("POST", "/api/feedback/request", values);
+      const res = await apiRequest("POST", "/api/feedback/request", values);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/feedback"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Feedback request sent" });
+      showXpToast(data.xpAwarded, "Feedback requested");
     },
     onError: () => {
       toast({ title: "Failed to send request", variant: "destructive" });

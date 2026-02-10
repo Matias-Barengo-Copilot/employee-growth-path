@@ -1,4 +1,4 @@
-import { eq, and, desc, or, asc } from "drizzle-orm";
+import { eq, and, desc, or, asc, gte, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   type User,
@@ -33,6 +33,8 @@ import {
   type InsertTimeOffRequest,
   type TimeOffBalance,
   type InsertTimeOffBalance,
+  type XpEvent,
+  type InsertXpEvent,
   users,
   companies,
   teams,
@@ -49,6 +51,7 @@ import {
   skillAssessments,
   timeOffRequests,
   timeOffBalances,
+  xpEvents,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -128,6 +131,12 @@ export interface IStorage {
   getTimeOffBalance(employeeId: string, year: number): Promise<TimeOffBalance | undefined>;
   createTimeOffBalance(balance: InsertTimeOffBalance): Promise<TimeOffBalance>;
   updateTimeOffBalance(id: string, data: Partial<InsertTimeOffBalance>): Promise<TimeOffBalance | undefined>;
+
+  createXpEvent(event: InsertXpEvent): Promise<XpEvent>;
+  getXpEventsByEmployeeAndWeek(employeeId: string, weekKey: string): Promise<XpEvent[]>;
+  getXpEventsByEmployeeAndSeason(employeeId: string, seasonQuarter: number, seasonYear: number): Promise<XpEvent[]>;
+  getXpEventsByEmployeeWeekAndCategory(employeeId: string, weekKey: string, category: string): Promise<XpEvent[]>;
+  getXpEventsByEmployeeWeekCategoryAndRecipient(employeeId: string, weekKey: string, category: string, recipientId: string): Promise<XpEvent[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -448,6 +457,48 @@ export class DatabaseStorage implements IStorage {
   async updateTimeOffBalance(id: string, data: Partial<InsertTimeOffBalance>): Promise<TimeOffBalance | undefined> {
     const [updated] = await db.update(timeOffBalances).set(data).where(eq(timeOffBalances.id, id)).returning();
     return updated;
+  }
+
+  async createXpEvent(event: InsertXpEvent): Promise<XpEvent> {
+    const [newEvent] = await db.insert(xpEvents).values(event).returning();
+    return newEvent;
+  }
+
+  async getXpEventsByEmployeeAndWeek(employeeId: string, weekKey: string): Promise<XpEvent[]> {
+    return db.select().from(xpEvents).where(
+      and(eq(xpEvents.employeeId, employeeId), eq(xpEvents.weekKey, weekKey))
+    );
+  }
+
+  async getXpEventsByEmployeeAndSeason(employeeId: string, seasonQuarter: number, seasonYear: number): Promise<XpEvent[]> {
+    return db.select().from(xpEvents).where(
+      and(
+        eq(xpEvents.employeeId, employeeId),
+        eq(xpEvents.seasonQuarter, seasonQuarter),
+        eq(xpEvents.seasonYear, seasonYear)
+      )
+    );
+  }
+
+  async getXpEventsByEmployeeWeekAndCategory(employeeId: string, weekKey: string, category: string): Promise<XpEvent[]> {
+    return db.select().from(xpEvents).where(
+      and(
+        eq(xpEvents.employeeId, employeeId),
+        eq(xpEvents.weekKey, weekKey),
+        eq(xpEvents.category, category as any)
+      )
+    );
+  }
+
+  async getXpEventsByEmployeeWeekCategoryAndRecipient(employeeId: string, weekKey: string, category: string, recipientId: string): Promise<XpEvent[]> {
+    return db.select().from(xpEvents).where(
+      and(
+        eq(xpEvents.employeeId, employeeId),
+        eq(xpEvents.weekKey, weekKey),
+        eq(xpEvents.category, category as any),
+        eq(xpEvents.recipientId, recipientId)
+      )
+    );
   }
 }
 

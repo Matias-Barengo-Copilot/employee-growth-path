@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Check, Flag, Lock, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useXpToast } from "@/hooks/use-xp-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import type { Milestone, MilestoneStep, JournalEntry } from "@shared/schema";
@@ -31,6 +32,7 @@ interface MilestoneDetailDialogProps {
 export function MilestoneDetailDialog({ milestone, open, onOpenChange, journalEntries }: MilestoneDetailDialogProps) {
   const [newStepTitle, setNewStepTitle] = useState("");
   const { toast } = useToast();
+  const { showXpToast } = useXpToast();
 
   const completedSteps = milestone.steps.filter(s => s.isCompleted).length;
   const totalSteps = milestone.steps.length;
@@ -52,10 +54,13 @@ export function MilestoneDetailDialog({ milestone, open, onOpenChange, journalEn
 
   const toggleStepMutation = useMutation({
     mutationFn: async ({ stepId, isCompleted }: { stepId: string; isCompleted: boolean }) => {
-      return apiRequest("PATCH", `/api/career/steps/${stepId}`, { isCompleted });
+      const res = await apiRequest("PATCH", `/api/career/steps/${stepId}`, { isCompleted });
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/career"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
+      showXpToast(data.xpAwarded, "Step completed");
     },
     onError: () => {
       toast({ title: "Failed to update step", variant: "destructive" });
@@ -74,12 +79,15 @@ export function MilestoneDetailDialog({ milestone, open, onOpenChange, journalEn
 
   const completeMilestoneMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("PATCH", `/api/career/milestones/${milestone.id}`, { status: "completed" });
+      const res = await apiRequest("PATCH", `/api/career/milestones/${milestone.id}`, { status: "completed" });
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/career"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Milestone completed! Great job!" });
       onOpenChange(false);
+      showXpToast(data.xpAwarded, "Milestone completed");
     },
     onError: () => {
       toast({ title: "Failed to complete milestone", variant: "destructive" });

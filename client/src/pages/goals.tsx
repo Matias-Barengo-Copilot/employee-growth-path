@@ -15,6 +15,7 @@ import { GoalCard } from "@/components/goal-card";
 import { EmptyState } from "@/components/empty-state";
 import { CreateGoalDialog } from "@/components/dialogs/create-goal-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useXpToast } from "@/hooks/use-xp-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GOAL_CATEGORIES, GOAL_STATUSES } from "@/lib/constants";
 import type { Goal, Employee } from "@shared/schema";
@@ -30,6 +31,7 @@ export default function Goals() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
+  const { showXpToast } = useXpToast();
 
   const { data, isLoading } = useQuery<GoalsData>({
     queryKey: ["/api/goals"],
@@ -37,12 +39,15 @@ export default function Goals() {
 
   const createGoalMutation = useMutation({
     mutationFn: async (values: any) => {
-      return apiRequest("POST", "/api/goals", values);
+      const res = await apiRequest("POST", "/api/goals", values);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Goal created successfully" });
+      showXpToast(data.xpAwarded, "Goal created");
     },
     onError: () => {
       toast({ title: "Failed to create goal", variant: "destructive" });
@@ -51,13 +56,16 @@ export default function Goals() {
 
   const updateGoalMutation = useMutation({
     mutationFn: async ({ id, ...values }: any) => {
-      return apiRequest("PATCH", `/api/goals/${id}`, values);
+      const res = await apiRequest("PATCH", `/api/goals/${id}`, values);
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Goal updated successfully" });
       setEditingGoal(null);
+      showXpToast(data.xpAwarded, "Goal updated");
     },
     onError: () => {
       toast({ title: "Failed to update goal", variant: "destructive" });

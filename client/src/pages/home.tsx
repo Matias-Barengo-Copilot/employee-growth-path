@@ -21,6 +21,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
 import { SnapCard } from "@/components/snap-card";
+import { XpLevelWidget, XpWeeklyBreakdown } from "@/components/xp-level-widget";
 import { formatDistanceToNow } from "date-fns";
 import type { Employee, Goal, Snap, FeedbackRequest, Activity as ActivityType } from "@shared/schema";
 
@@ -182,6 +183,8 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
+
+        <XpLevelWidget />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>

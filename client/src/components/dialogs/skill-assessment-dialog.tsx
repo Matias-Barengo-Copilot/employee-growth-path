@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
+import { useXpToast } from "@/hooks/use-xp-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const DEFAULT_DIMENSIONS = [
@@ -33,16 +34,20 @@ export function SkillAssessmentDialog({ open, onOpenChange }: SkillAssessmentDia
     Object.fromEntries(DEFAULT_DIMENSIONS.map(d => [d, 5]))
   );
   const { toast } = useToast();
+  const { showXpToast } = useXpToast();
 
   const createMutation = useMutation({
     mutationFn: async (dimensions: Array<{ name: string; score: number }>) => {
-      return apiRequest("POST", "/api/career/skills", { dimensions });
+      const res = await apiRequest("POST", "/api/career/skills", { dimensions });
+      return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/career"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/xp/summary"] });
       toast({ title: "Skill assessment saved" });
       setScores(Object.fromEntries(DEFAULT_DIMENSIONS.map(d => [d, 5])));
       onOpenChange(false);
+      showXpToast(data.xpAwarded, "Skills assessed");
     },
     onError: () => {
       toast({ title: "Failed to save assessment", variant: "destructive" });

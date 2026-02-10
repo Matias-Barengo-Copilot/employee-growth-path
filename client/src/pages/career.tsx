@@ -36,6 +36,7 @@ import { CreateMilestoneDialog } from "@/components/dialogs/create-milestone-dia
 import { JournalDialog } from "@/components/dialogs/journal-dialog";
 import { SkillAssessmentDialog } from "@/components/dialogs/skill-assessment-dialog";
 import { SkillRadarChart } from "@/components/skill-radar-chart";
+import { XpWeeklyBreakdown } from "@/components/xp-level-widget";
 import type { Milestone, MilestoneStep, JournalEntry, SkillAssessment, CareerPath } from "@shared/schema";
 
 interface MilestoneWithSteps extends Milestone {
@@ -166,6 +167,10 @@ export default function Career() {
                 </div>
               </div>
             </div>
+          </Card>
+
+          <Card className="p-4 lg:p-6">
+            <XpWeeklyBreakdown />
           </Card>
 
           <Tabs defaultValue="map" className="w-full">
