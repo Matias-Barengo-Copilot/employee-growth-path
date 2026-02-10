@@ -1,0 +1,84 @@
+Purpose
+Use a lightweight experience points (XP) system to encourage healthy habits (recognition, feedback, goal hygiene, learning) and increase adoption without turning the app into a “points-for-clicks” game.
+Design intent:
+XP rewards growth behaviors and culture participation (inputs) while performance reviews remain grounded in outcomes.
+XP should be hard to spam, easy to understand, and positive (no penalties).
+XP Counters
+Season XP (Primary): resets every quarter; used for levels and “this quarter” progress.
+Lifetime XP (Secondary): cumulative; used for personal history.
+Core Rules (Caps, Decay, Anti-Spam)
+Weekly category caps prevent farming (e.g., Snaps cannot be spammed for unlimited XP).
+Per-recipient caps prevent “you and your buddy trade points.”
+Diminishing returns inside a category (after a few actions, XP drops to 0 until next week).
+Quality gates for actions that can be low-effort (feedback and long-form entries require minimum content).
+Season reset (decay): Season XP resets each quarter to keep the system fresh and reduce long-term runaway totals.
+Abuse monitoring: flag unusual patterns (high reciprocity pairs, copy/paste feedback, repeated identical snaps) for admin review.
+XP Values (Baseline)
+Admin-configurable in settings. Values below are suggested defaults.
+Recognition (Snaps)
+Give a Snap: +1 XP
+Cap: max 10 XP/week from Snap-giving
+Per-recipient cap: max 2 XP/week for Snaps to the same person
+Anti-spam: minimum note length (e.g., 20+ characters) or select a tag + short note; duplicates don’t count
+Receive a Snap: +1 XP
+Cap: max 5 XP/week from Snap-receiving (keeps it from becoming a popularity contest)
+Feedback (Peer)
+Provide peer feedback: +3 XP
+Cap: max 12 XP/week (≈ 4 quality feedback entries)
+Quality gate: must include both “Keep doing” and “Consider improving” (or meet min length)
+Feedback marked “Helpful” by recipient: +2 bonus XP
+Cap: max 6 bonus XP/week
+Anti-gaming: helpful votes cannot be revoked/stacked; recipients can only mark once per item
+Request peer feedback: +2 XP
+Cap: max 4 XP/week
+Anti-spam: request must include a prompt (template + optional context)
+Close the loop (optional): recipient clicks “Thanks / Received” on feedback: +1 XP
+Cap: max 3 XP/week (reinforces healthy culture)
+Note on anonymity: anonymous feedback is allowed (policy-based). XP remains available, but abuse/flagging protections are stricter (e.g., flagged content escalates to admin review).
+Goals & OKRs
+Create a goal/OKR: +3 XP
+Cap: max 6 XP/week
+Weekly goal update/check-in: +2 XP
+Cap: max 8 XP/week
+Anti-spam: only one update per goal per week counts
+Complete a goal: +8 XP
+Cap: max 16 XP/week (prevents retroactive mass-completions from flooding XP)
+Learning & Development (Phase 2–3)
+Complete a course (verified): +10 XP
+Cap: max 20 XP/month
+Verification: link/upload completion evidence or approved provider integration
+Professional Challenge completed: +5 XP
+Cap: max 15 XP/week
+Reflection (Phase 3)
+Quarterly self-reflection completed: +15 XP
+Semi-annual self-assessment packet completed: +25 XP
+Social / Community (Phase 2)
+Create a post: +1 XP
+Cap: max 5 XP/week
+Meaningful comment: +1 XP
+Cap: max 3 XP/week (optional; can be disabled to reduce noise)
+Variety & Streak Bonuses (Optional)
+To encourage balanced participation (not just one behavior):
+Variety bonus: +3 XP when a user completes 3 distinct categories in a week (e.g., Snap + Goal update + Feedback).
+Consistency streak: maintain a “2-actions-per-week” streak for a small bonus (e.g., +2 XP/week), with one grace week per quarter.
+Levels (Season XP)
+Level 1: 0–24 XP
+Level 2: 25–59 XP
+Level 3: 60–99 XP
+Level 4: 100–149 XP
+Level 5: 150+ XP
+Display as a subtle progress ring and level label (no heavy gamification visuals).
+How XP is Used (and Not Used)
+Used for:
+Personal progress visualization (“growth habits this quarter”)
+Optional perks later (e.g., Growth Wallet: learning stipend credits, conference budget, etc.)
+Fueling review prep (auto-generated “Review Packet” pulls goals, feedback themes, and highlights)
+Not used for:
+Directly determining performance ratings or compensation
+Punishing low participation (no negative scoring)
+Admin Controls
+Enable/disable XP entirely or per feature
+Adjust point values and caps
+Configure season length (default: quarterly)
+Configure content quality gates and anti-spam thresholds
+View abuse flags and moderation queue
