@@ -1,11 +1,11 @@
 import { useLocation, Link } from "wouter";
-import { Users, Target, Sparkles, TrendingUp, Home } from "lucide-react";
+import { Users, Target, Sparkles, TrendingUp, Home, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { title: "Home", url: "/", icon: Home },
-  { title: "Directory", url: "/directory", icon: Users },
   { title: "Goals", url: "/goals", icon: Target },
+  { title: "Time Off", url: "/time-off", icon: CalendarDays },
   { title: "Snaps", url: "/snaps", icon: Sparkles },
   { title: "Career", url: "/career", icon: TrendingUp },
 ];

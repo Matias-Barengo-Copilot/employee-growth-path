@@ -838,6 +838,158 @@ export async function registerRoutes(
     res.status(201).json(assessment);
   });
 
+  // ===== TIME OFF =====
+
+  app.get("/api/time-off/requests", async (req: AuthenticatedRequest, res: Response) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+    const requests = await storage.getTimeOffRequestsByEmployee(employee.id);
+    res.json(requests);
+  });
+
+  app.get("/api/time-off/balance", async (req: AuthenticatedRequest, res: Response) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+    const year = new Date().getFullYear();
+    let balance = await storage.getTimeOffBalance(employee.id, year);
+    if (!balance) {
+      balance = await storage.createTimeOffBalance({
+        employeeId: employee.id,
+        companyId: employee.companyId,
+        year,
+        vacationTotal: 15,
+        vacationUsed: 0,
+        sickTotal: 10,
+        sickUsed: 0,
+        personalTotal: 3,
+        personalUsed: 0,
+      });
+    }
+    res.json(balance);
+  });
+
+  app.get("/api/time-off/pending", async (req: AuthenticatedRequest, res: Response) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+    if (employee.role !== "admin" && employee.role !== "manager") {
+      return res.status(403).json({ error: "Not authorized to view pending requests" });
+    }
+    const pending = await storage.getPendingTimeOffRequestsForReviewer(employee.companyId);
+    const allEmployees = await storage.getEmployeesByCompany(employee.companyId);
+    const enriched = pending.map(r => {
+      const emp = allEmployees.find(e => e.id === r.employeeId);
+      return { ...r, employeeName: emp ? `${emp.firstName} ${emp.lastName}` : "Unknown", employeeTitle: emp?.title || "" };
+    });
+    res.json(enriched);
+  });
+
+  app.post("/api/time-off/requests", async (req: AuthenticatedRequest, res: Response) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    const schema = z.object({
+      type: z.enum(["vacation", "sick", "half_day", "personal"]),
+      startDate: z.string(),
+      endDate: z.string(),
+      reason: z.string().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request data", details: parsed.error.errors });
+    }
+
+    const { type, startDate, endDate, reason } = parsed.data;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ error: "Invalid dates" });
+    }
+    if (start > end) {
+      return res.status(400).json({ error: "Start date must be before or equal to end date" });
+    }
+
+    const totalDays = type === "half_day" ? 0.5 : Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+    const request = await storage.createTimeOffRequest({
+      employeeId: employee.id,
+      companyId: employee.companyId,
+      type,
+      startDate: start,
+      endDate: end,
+      reason: reason || null,
+      status: "pending",
+      reviewedBy: null,
+      reviewNote: null,
+      reviewedAt: null,
+      totalDays,
+    });
+
+    res.status(201).json(request);
+  });
+
+  app.patch("/api/time-off/requests/:id", async (req: AuthenticatedRequest, res: Response) => {
+    const employee = await ensureEmployee(req, res);
+    if (!employee) return;
+
+    if (employee.role !== "admin" && employee.role !== "manager") {
+      return res.status(403).json({ error: "Not authorized to review requests" });
+    }
+
+    const schema = z.object({
+      status: z.enum(["approved", "declined"]),
+      reviewNote: z.string().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid review data" });
+    }
+
+    const request = await storage.getTimeOffRequestById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+    if (request.companyId !== employee.companyId) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    if (request.status !== "pending") {
+      return res.status(400).json({ error: "Request already reviewed" });
+    }
+
+    const updated = await storage.updateTimeOffRequest(request.id, {
+      status: parsed.data.status,
+      reviewedBy: employee.id,
+      reviewNote: parsed.data.reviewNote || null,
+      reviewedAt: new Date(),
+    });
+
+    if (parsed.data.status === "approved") {
+      const year = new Date(request.startDate).getFullYear();
+      let balance = await storage.getTimeOffBalance(request.employeeId, year);
+      if (!balance) {
+        balance = await storage.createTimeOffBalance({
+          employeeId: request.employeeId,
+          companyId: request.companyId,
+          year,
+          vacationTotal: 15, vacationUsed: 0,
+          sickTotal: 10, sickUsed: 0,
+          personalTotal: 3, personalUsed: 0,
+        });
+      }
+
+      const balanceType = request.type === "half_day" ? "personal" : request.type;
+      const usedField = `${balanceType}Used` as "vacationUsed" | "sickUsed" | "personalUsed";
+      const currentUsed = balance[usedField] || 0;
+      await storage.updateTimeOffBalance(balance.id, {
+        [usedField]: currentUsed + request.totalDays,
+      });
+    }
+
+    res.json(updated);
+  });
+
   app.post("/api/transcribe", async (req: Request, res: Response) => {
     try {
       const { audio } = req.body;

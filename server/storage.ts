@@ -29,6 +29,10 @@ import {
   type InsertJournalEntry,
   type SkillAssessment,
   type InsertSkillAssessment,
+  type TimeOffRequest,
+  type InsertTimeOffRequest,
+  type TimeOffBalance,
+  type InsertTimeOffBalance,
   users,
   companies,
   teams,
@@ -43,6 +47,8 @@ import {
   milestoneSteps,
   journalEntries,
   skillAssessments,
+  timeOffRequests,
+  timeOffBalances,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -112,6 +118,16 @@ export interface IStorage {
 
   getSkillAssessmentsByEmployee(employeeId: string): Promise<SkillAssessment[]>;
   createSkillAssessment(assessment: InsertSkillAssessment): Promise<SkillAssessment>;
+
+  getTimeOffRequestsByEmployee(employeeId: string): Promise<TimeOffRequest[]>;
+  getTimeOffRequestById(id: string): Promise<TimeOffRequest | undefined>;
+  getPendingTimeOffRequestsForReviewer(companyId: string): Promise<TimeOffRequest[]>;
+  createTimeOffRequest(request: InsertTimeOffRequest): Promise<TimeOffRequest>;
+  updateTimeOffRequest(id: string, data: Partial<InsertTimeOffRequest>): Promise<TimeOffRequest | undefined>;
+
+  getTimeOffBalance(employeeId: string, year: number): Promise<TimeOffBalance | undefined>;
+  createTimeOffBalance(balance: InsertTimeOffBalance): Promise<TimeOffBalance>;
+  updateTimeOffBalance(id: string, data: Partial<InsertTimeOffBalance>): Promise<TimeOffBalance | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -384,6 +400,54 @@ export class DatabaseStorage implements IStorage {
   async createSkillAssessment(assessment: InsertSkillAssessment): Promise<SkillAssessment> {
     const [newAssessment] = await db.insert(skillAssessments).values(assessment).returning();
     return newAssessment;
+  }
+
+  async getTimeOffRequestsByEmployee(employeeId: string): Promise<TimeOffRequest[]> {
+    return db.select().from(timeOffRequests).where(eq(timeOffRequests.employeeId, employeeId)).orderBy(desc(timeOffRequests.createdAt));
+  }
+
+  async getTimeOffRequestById(id: string): Promise<TimeOffRequest | undefined> {
+    const [request] = await db.select().from(timeOffRequests).where(eq(timeOffRequests.id, id));
+    return request;
+  }
+
+  async getPendingTimeOffRequestsForReviewer(companyId: string): Promise<TimeOffRequest[]> {
+    return db.select().from(timeOffRequests).where(
+      and(
+        eq(timeOffRequests.companyId, companyId),
+        eq(timeOffRequests.status, "pending")
+      )
+    ).orderBy(asc(timeOffRequests.createdAt));
+  }
+
+  async createTimeOffRequest(request: InsertTimeOffRequest): Promise<TimeOffRequest> {
+    const [newRequest] = await db.insert(timeOffRequests).values(request).returning();
+    return newRequest;
+  }
+
+  async updateTimeOffRequest(id: string, data: Partial<InsertTimeOffRequest>): Promise<TimeOffRequest | undefined> {
+    const [updated] = await db.update(timeOffRequests).set(data).where(eq(timeOffRequests.id, id)).returning();
+    return updated;
+  }
+
+  async getTimeOffBalance(employeeId: string, year: number): Promise<TimeOffBalance | undefined> {
+    const [balance] = await db.select().from(timeOffBalances).where(
+      and(
+        eq(timeOffBalances.employeeId, employeeId),
+        eq(timeOffBalances.year, year)
+      )
+    );
+    return balance;
+  }
+
+  async createTimeOffBalance(balance: InsertTimeOffBalance): Promise<TimeOffBalance> {
+    const [newBalance] = await db.insert(timeOffBalances).values(balance).returning();
+    return newBalance;
+  }
+
+  async updateTimeOffBalance(id: string, data: Partial<InsertTimeOffBalance>): Promise<TimeOffBalance | undefined> {
+    const [updated] = await db.update(timeOffBalances).set(data).where(eq(timeOffBalances.id, id)).returning();
+    return updated;
   }
 }
 

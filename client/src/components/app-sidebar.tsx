@@ -11,6 +11,7 @@ import {
   Activity,
   UserCircle,
   TrendingUp,
+  CalendarDays,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ const navItems = [
   { title: "Goals", url: "/goals", icon: Target },
   { title: "Snaps", url: "/snaps", icon: Sparkles },
   { title: "Feedback", url: "/feedback", icon: MessageSquare },
+  { title: "Time Off", url: "/time-off", icon: CalendarDays },
   { title: "Activity", url: "/activity", icon: Activity },
   { title: "Career", url: "/career", icon: TrendingUp },
 ];

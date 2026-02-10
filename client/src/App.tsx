@@ -22,6 +22,7 @@ import Profile from "@/pages/profile";
 import ActivityFeed from "@/pages/activity";
 import Career from "@/pages/career";
 import Settings from "@/pages/settings";
+import TimeOff from "@/pages/time-off";
 import type { Employee } from "@shared/schema";
 import { AICoach } from "@/components/ai-coach";
 
@@ -72,6 +73,7 @@ function AuthenticatedRouter() {
         <Route path="/profile" component={Profile} />
         <Route path="/activity" component={ActivityFeed} />
         <Route path="/career" component={Career} />
+        <Route path="/time-off" component={TimeOff} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

@@ -11,7 +11,8 @@ Copilot is a mobile-first employee experience application designed for small age
 - **Peer Feedback** - Request and provide constructive feedback with anonymous options
 - **Dashboard** - Unified view of goals, recent activity, and pending actions
 - **Career Growth Journey** - Career map with milestones (4 phases), XP system, journal entries, skill radar chart, and achievement badges
-- **Voice Input** - Microphone buttons on text fields throughout the app (goals, journal, snaps, feedback) using OpenAI gpt-4o-mini-transcribe for speech-to-text
+- **Time Off** - Request vacation, sick days, half days, and personal time; managers/admins approve or decline; leave balance tracking per year
+- **Voice Input** - Microphone buttons on text fields throughout the app (goals, journal, snaps, feedback, time-off) using OpenAI gpt-4o-mini-transcribe for speech-to-text
 - **AI Coach** - Floating contextual career coach (bottom-right button) that understands user role, goals, and current page to provide personalized guidance via streaming chat
 
 The application is built as a monorepo with a React frontend and Express backend, using PostgreSQL for data persistence and Replit Auth for authentication.
@@ -60,6 +61,8 @@ The schema uses PostgreSQL with these core entities:
 - **MilestoneSteps** - Checklist items within milestones (10 XP each on completion)
 - **JournalEntries** - Progress journal entries (15 XP each, feed streak tracking)
 - **SkillAssessments** - Self-assessment with multi-dimension scoring (20 XP each)
+- **TimeOffRequests** - Leave requests with type (vacation/sick/half_day/personal), date range, status (pending/approved/declined), reviewer info
+- **TimeOffBalances** - Per-employee per-year leave allocations and usage (vacation: 15, sick: 10, personal: 3 days)
 
 ### Career Growth System
 - XP thresholds: Foundation (0-200), Growing (200-500), Leading (500-1000), Mastering (1000+)
