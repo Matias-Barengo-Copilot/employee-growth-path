@@ -71,6 +71,18 @@ The schema uses PostgreSQL with these core entities:
 - Ownership validation on all career resource mutations
 - Demo mode (DEMO_MODE=true) bypasses auth, uses Sarah Chen as demo user
 
+### XP Rewards System (server/xp-engine.ts)
+- **Season Levels** (reset quarterly): Starter (0-24), Contributor (25-59), Engaged (60-99), Champion (100-149), All-Star (150+)
+- **Lifetime XP** persists forever; **Season XP** resets each quarter
+- **XP Events Ledger** (xp_events table): every XP award is recorded with category, week key, recipient, and season info
+- **Weekly Category Caps**: snap_give:10, snap_receive:5, feedback_give:12, feedback_request:4, feedback_helpful:6, goal_create:6, goal_update:8, goal_complete:16, milestone_complete:30, milestone_step:15, journal:15, skill_assessment:10
+- **Per-recipient Cap**: snap_give limited to 2 XP per recipient per week
+- **Quality Gate**: feedback requires 20+ total characters
+- **Variety Bonus**: +3 XP when earning in 3+ of 4 groups (recognition, feedback, goals, learning) per week
+- **Consistency Streak**: +2 XP/week for maintaining 2+ actions/week for consecutive weeks
+- **Frontend**: XpLevelWidget on dashboard (progress ring, level, streak), XpWeeklyBreakdown on career page, toast notifications on all XP-earning actions
+- **API**: GET /api/xp/summary returns season/lifetime XP, level, weekly breakdown by grouped categories, bonuses
+
 ### Shared Code
 The `shared/` directory contains:
 - Database schema definitions (Drizzle tables and types)
