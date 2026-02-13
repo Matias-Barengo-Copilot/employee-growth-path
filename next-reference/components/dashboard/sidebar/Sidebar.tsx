@@ -113,7 +113,7 @@ export function Sidebar({ userRole, canViewAllLeaveRequests = false }: SidebarPr
               <li key={`${item.href}-${item.label}-${index}`}>
                 <NavItem
                   {...item}
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)}
                   isCollapsed={isCollapsed}
                 />
               </li>
@@ -178,7 +178,7 @@ export function Sidebar({ userRole, canViewAllLeaveRequests = false }: SidebarPr
               <li key={`${item.href}-${item.label}-${index}`}>
                 <NavItem
                   {...item}
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)}
                   isCollapsed={false}
                 />
               </li>

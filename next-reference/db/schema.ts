@@ -10,6 +10,8 @@ import {
   pgEnum,
   unique,
   numeric,
+  jsonb,
+  real,
   type PgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -212,6 +214,18 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   }),
   leaveRequests: many(leaveRequests),
   leaveApprovals: many(leaveApprovals),
+  goals: many(goals),
+  snapsSent: many(snaps, { relationName: "snapSender" }),
+  snapsReceived: many(snaps, { relationName: "snapRecipient" }),
+  feedbackGiven: many(feedback, { relationName: "feedbackSender" }),
+  feedbackReceived: many(feedback, { relationName: "feedbackRecipient" }),
+  feedbackRequested: many(feedbackRequests, { relationName: "feedbackRequester" }),
+  feedbackResponding: many(feedbackRequests, { relationName: "feedbackResponder" }),
+  careerPath: many(careerPaths),
+  journalEntries: many(journalEntries),
+  skillAssessments: many(skillAssessments),
+  xpEvents: many(xpEvents),
+  activitiesPerformed: many(activities),
 }));
 
 export const leaveRequestsRelations = relations(
@@ -286,4 +300,423 @@ export const employeeSupervisorsRelations = relations(
     }),
   })
 );
+
+// =============================================
+// New Feature Enums
+// =============================================
+
+export const goalCategoryEnum = pgEnum("goal_category", [
+  "growth",
+  "delivery",
+  "leadership",
+  "learning",
+]);
+
+export const goalStatusEnum = pgEnum("goal_status", [
+  "not_started",
+  "on_track",
+  "at_risk",
+  "completed",
+]);
+
+export const goalVisibilityEnum = pgEnum("goal_visibility", [
+  "private",
+  "manager",
+  "team",
+]);
+
+export const feedbackStatusEnum = pgEnum("feedback_status", [
+  "pending",
+  "completed",
+]);
+
+export const activityTypeEnum = pgEnum("activity_type", [
+  "snap_sent",
+  "goal_created",
+  "goal_completed",
+  "feedback_given",
+  "feedback_requested",
+  "profile_updated",
+  "member_joined",
+]);
+
+export const careerPhaseEnum = pgEnum("career_phase", [
+  "foundation",
+  "growing",
+  "leading",
+  "mastering",
+]);
+
+export const milestoneStatusEnum = pgEnum("milestone_status", [
+  "locked",
+  "active",
+  "completed",
+]);
+
+export const xpCategoryEnum = pgEnum("xp_category", [
+  "snap_give",
+  "snap_receive",
+  "feedback_give",
+  "feedback_request",
+  "feedback_helpful",
+  "goal_create",
+  "goal_update",
+  "goal_complete",
+  "milestone_complete",
+  "milestone_step",
+  "journal",
+  "skill_assessment",
+  "variety_bonus",
+  "streak_bonus",
+]);
+
+// =============================================
+// New Feature Tables
+// =============================================
+
+export const goals = pgTable("goals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  category: goalCategoryEnum("category").notNull(),
+  status: goalStatusEnum("status").notNull().default("not_started"),
+  visibility: goalVisibilityEnum("visibility").notNull().default("private"),
+  progress: integer("progress").default(0).notNull(),
+  quarter: varchar("quarter", { length: 10 }),
+  dueDate: timestamp("due_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const snaps = pgTable("snaps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  senderId: uuid("sender_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  recipientId: uuid("recipient_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  tags: text("tags").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const feedbackRequests = pgTable("feedback_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requesterId: uuid("requester_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  responderId: uuid("responder_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  prompt: text("prompt"),
+  status: feedbackStatusEnum("status").notNull().default("pending"),
+  deadline: timestamp("deadline"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const feedback = pgTable("feedback", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  senderId: uuid("sender_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  recipientId: uuid("recipient_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  requestId: uuid("request_id").references(() => feedbackRequests.id),
+  keepDoing: text("keep_doing"),
+  considerImproving: text("consider_improving"),
+  tags: text("tags").array(),
+  isAnonymous: boolean("is_anonymous").default(false).notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activities = pgTable("activities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  actorId: uuid("actor_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  type: activityTypeEnum("type").notNull(),
+  targetId: uuid("target_id"),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const careerPaths = pgTable("career_paths", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  currentPhase: careerPhaseEnum("current_phase").notNull().default("foundation"),
+  xp: integer("xp").notNull().default(0),
+  seasonXp: integer("season_xp").notNull().default(0),
+  lifetimeXp: integer("lifetime_xp").notNull().default(0),
+  seasonQuarter: integer("season_quarter").notNull().default(1),
+  seasonYear: integer("season_year").notNull().default(2026),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastJournalDate: timestamp("last_journal_date"),
+  lastActiveWeek: varchar("last_active_week", { length: 20 }),
+  weeklyActionCount: integer("weekly_action_count").notNull().default(0),
+  consistencyStreak: integer("consistency_streak").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const milestones = pgTable("milestones", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  careerPathId: uuid("career_path_id")
+    .notNull()
+    .references(() => careerPaths.id, { onDelete: "cascade" }),
+  phase: careerPhaseEnum("phase").notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  status: milestoneStatusEnum("status").notNull().default("locked"),
+  position: integer("position").notNull().default(0),
+  xpReward: integer("xp_reward").notNull().default(50),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const milestoneSteps = pgTable("milestone_steps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  milestoneId: uuid("milestone_id")
+    .notNull()
+    .references(() => milestones.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 500 }).notNull(),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const journalEntries = pgTable("journal_entries", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  milestoneId: uuid("milestone_id").references(() => milestones.id),
+  whatLearned: text("what_learned"),
+  whatAccomplished: text("what_accomplished"),
+  whatsNext: text("whats_next"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const skillAssessments = pgTable("skill_assessments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  dimensions: jsonb("dimensions")
+    .notNull()
+    .$type<Array<{ name: string; score: number }>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const xpEvents = pgTable("xp_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  category: xpCategoryEnum("category").notNull(),
+  xpAwarded: integer("xp_awarded").notNull(),
+  recipientId: uuid("recipient_id"),
+  targetId: uuid("target_id"),
+  seasonQuarter: integer("season_quarter").notNull(),
+  seasonYear: integer("season_year").notNull(),
+  weekKey: varchar("week_key", { length: 20 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =============================================
+// New Feature Relations
+// =============================================
+
+export const goalsRelations = relations(goals, ({ one }) => ({
+  employee: one(employees, {
+    fields: [goals.employeeId],
+    references: [employees.id],
+  }),
+  company: one(companies, {
+    fields: [goals.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const snapsRelations = relations(snaps, ({ one }) => ({
+  sender: one(employees, {
+    fields: [snaps.senderId],
+    references: [employees.id],
+    relationName: "snapSender",
+  }),
+  recipient: one(employees, {
+    fields: [snaps.recipientId],
+    references: [employees.id],
+    relationName: "snapRecipient",
+  }),
+  company: one(companies, {
+    fields: [snaps.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const feedbackRequestsRelations = relations(
+  feedbackRequests,
+  ({ one }) => ({
+    requester: one(employees, {
+      fields: [feedbackRequests.requesterId],
+      references: [employees.id],
+      relationName: "feedbackRequester",
+    }),
+    responder: one(employees, {
+      fields: [feedbackRequests.responderId],
+      references: [employees.id],
+      relationName: "feedbackResponder",
+    }),
+    company: one(companies, {
+      fields: [feedbackRequests.companyId],
+      references: [companies.id],
+    }),
+  })
+);
+
+export const feedbackRelations = relations(feedback, ({ one }) => ({
+  sender: one(employees, {
+    fields: [feedback.senderId],
+    references: [employees.id],
+    relationName: "feedbackSender",
+  }),
+  recipient: one(employees, {
+    fields: [feedback.recipientId],
+    references: [employees.id],
+    relationName: "feedbackRecipient",
+  }),
+  company: one(companies, {
+    fields: [feedback.companyId],
+    references: [companies.id],
+  }),
+  request: one(feedbackRequests, {
+    fields: [feedback.requestId],
+    references: [feedbackRequests.id],
+  }),
+}));
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+  actor: one(employees, {
+    fields: [activities.actorId],
+    references: [employees.id],
+  }),
+  company: one(companies, {
+    fields: [activities.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const careerPathsRelations = relations(
+  careerPaths,
+  ({ one, many }) => ({
+    employee: one(employees, {
+      fields: [careerPaths.employeeId],
+      references: [employees.id],
+    }),
+    company: one(companies, {
+      fields: [careerPaths.companyId],
+      references: [companies.id],
+    }),
+    milestones: many(milestones),
+  })
+);
+
+export const milestonesRelations = relations(
+  milestones,
+  ({ one, many }) => ({
+    careerPath: one(careerPaths, {
+      fields: [milestones.careerPathId],
+      references: [careerPaths.id],
+    }),
+    steps: many(milestoneSteps),
+  })
+);
+
+export const milestoneStepsRelations = relations(
+  milestoneSteps,
+  ({ one }) => ({
+    milestone: one(milestones, {
+      fields: [milestoneSteps.milestoneId],
+      references: [milestones.id],
+    }),
+  })
+);
+
+export const journalEntriesRelations = relations(
+  journalEntries,
+  ({ one }) => ({
+    employee: one(employees, {
+      fields: [journalEntries.employeeId],
+      references: [employees.id],
+    }),
+    company: one(companies, {
+      fields: [journalEntries.companyId],
+      references: [companies.id],
+    }),
+    milestone: one(milestones, {
+      fields: [journalEntries.milestoneId],
+      references: [milestones.id],
+    }),
+  })
+);
+
+export const skillAssessmentsRelations = relations(
+  skillAssessments,
+  ({ one }) => ({
+    employee: one(employees, {
+      fields: [skillAssessments.employeeId],
+      references: [employees.id],
+    }),
+    company: one(companies, {
+      fields: [skillAssessments.companyId],
+      references: [companies.id],
+    }),
+  })
+);
+
+export const xpEventsRelations = relations(xpEvents, ({ one }) => ({
+  employee: one(employees, {
+    fields: [xpEvents.employeeId],
+    references: [employees.id],
+  }),
+  company: one(companies, {
+    fields: [xpEvents.companyId],
+    references: [companies.id],
+  }),
+}));
 

@@ -6,11 +6,56 @@ import {
   Settings,
   TestTube,
   BarChart3,
+  LayoutDashboard,
+  Target,
+  Zap,
+  MessageSquare,
+  TrendingUp,
 } from 'lucide-react';
 import { NavigationItem, UserRole } from '@/lib/types/navigation';
 import { isTestModeEnabled } from '@/lib/utils/test-mode';
 
+export type NavigationSection = {
+  label: string;
+  items: NavigationItem[];
+};
+
 const baseNavigationItems: NavigationItem[] = [
+  {
+    label: "Dashboard",
+    href: "/",
+    icon: LayoutDashboard,
+    roles: ["employee", "supervisor", "hr"],
+    exactMatch: true,
+  },
+  {
+    label: "Goals",
+    href: "/goals",
+    icon: Target,
+    roles: ["employee", "supervisor", "hr"],
+    exactMatch: false,
+  },
+  {
+    label: "Snaps",
+    href: "/snaps",
+    icon: Zap,
+    roles: ["employee", "supervisor", "hr"],
+    exactMatch: false,
+  },
+  {
+    label: "Feedback",
+    href: "/feedback",
+    icon: MessageSquare,
+    roles: ["employee", "supervisor", "hr"],
+    exactMatch: false,
+  },
+  {
+    label: "Career Growth",
+    href: "/career",
+    icon: TrendingUp,
+    roles: ["employee", "supervisor", "hr"],
+    exactMatch: false,
+  },
   {
     label: "Submit Leave Request",
     href: "/leave-requests/submit",
