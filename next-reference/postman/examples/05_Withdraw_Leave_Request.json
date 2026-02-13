@@ -1,0 +1,22 @@
+{
+	"name": "Withdraw Leave Request - Example",
+	"request": {
+		"method": "POST",
+		"header": [],
+		"url": {
+			"raw": "http://localhost:3000/api/leave-requests/880e8400-e29b-41d4-a716-446655440000/withdraw",
+			"protocol": "http",
+			"host": [
+				"localhost"
+			],
+			"port": "3000",
+			"path": [
+				"api",
+				"leave-requests",
+				"880e8400-e29b-41d4-a716-446655440000",
+				"withdraw"
+			]
+		}
+	}
+}
+

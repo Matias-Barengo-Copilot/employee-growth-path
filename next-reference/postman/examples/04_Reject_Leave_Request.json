@@ -1,0 +1,31 @@
+{
+	"name": "Reject Leave Request - Example",
+	"request": {
+		"method": "POST",
+		"header": [
+			{
+				"key": "Content-Type",
+				"value": "application/json"
+			}
+		],
+		"body": {
+			"mode": "raw",
+			"raw": "{\n  \"status\": \"rejected\",\n  \"comments\": \"Cannot approve due to critical project deadline. Please reschedule your leave.\"\n}"
+		},
+		"url": {
+			"raw": "http://localhost:3000/api/leave-requests/880e8400-e29b-41d4-a716-446655440000/approve",
+			"protocol": "http",
+			"host": [
+				"localhost"
+			],
+			"port": "3000",
+			"path": [
+				"api",
+				"leave-requests",
+				"880e8400-e29b-41d4-a716-446655440000",
+				"approve"
+			]
+		}
+	}
+}
+

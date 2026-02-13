@@ -1,0 +1,1 @@
+ALTER TYPE "public"."leave_request_status" ADD VALUE 'draft' BEFORE 'pending';

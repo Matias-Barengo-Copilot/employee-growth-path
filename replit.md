@@ -116,3 +116,15 @@ The `shared/` directory contains:
 - `zod` - Schema validation
 - `date-fns` - Date formatting
 - `lucide-react` - Icon library
+
+## Migration Planning
+
+A comprehensive migration plan has been created at `MIGRATION_PLAN_NEXT_INTEGRATION.md` (v1.1) to consolidate all features from this Replit app into the existing production Next.js application.
+
+**Key details:**
+- 9-phase migration approach over 3-4 weeks
+- Features to migrate: Goals, Snaps, Feedback, Career Growth, XP System, Dashboard, AI Coach, Voice Input
+- Features to keep in Next.js: Members/Directory, Time Off, Authentication
+- Data Migration: Fresh start recommended (Option A), ETL pipeline documented if needed (Option B)
+- Database safety: additive-only migrations, Neon branching for testing
+- Critical: Remove all DEMO_MODE code before production migration

@@ -1,0 +1,69 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1766155304906,
+      "tag": "0000_giant_pepper_potts",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766763104610,
+      "tag": "0001_cheerful_vengeance",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767124705763,
+      "tag": "0002_broken_gertrude_yorkes",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1767130507675,
+      "tag": "0003_dry_giant_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1767142450338,
+      "tag": "0004_concerned_donald_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1767190450400,
+      "tag": "0005_shocking_star_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1736265600000,
+      "tag": "0006_leave_request_days_structure",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1736265700000,
+      "tag": "0008_remove_old_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1736265800000,
+      "tag": "0009_add_pm_tech_lead_approver_roles",
+      "breakpoints": true
+    }
+  ]
+}
