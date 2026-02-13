@@ -1,0 +1,29 @@
+{
+	"name": "Submit Leave Request - Example",
+	"request": {
+		"method": "POST",
+		"header": [
+			{
+				"key": "Content-Type",
+				"value": "application/json"
+			}
+		],
+		"body": {
+			"mode": "raw",
+			"raw": "{\n  \"leaveType\": \"annual\",\n  \"fromDate\": \"2024-02-15\",\n  \"toDate\": \"2024-02-20\",\n  \"totalDays\": 5,\n  \"reason\": \"Family vacation to Hawaii\",\n  \"projects\": [\n    {\n      \"projectId\": \"660e8400-e29b-41d4-a716-446655440000\",\n      \"informedPm\": true,\n      \"informedTechLead\": true\n    },\n    {\n      \"projectId\": \"770e8400-e29b-41d4-a716-446655440000\",\n      \"informedPm\": false,\n      \"informedTechLead\": true\n    }\n  ]\n}"
+		},
+		"url": {
+			"raw": "http://localhost:3000/api/leave-requests",
+			"protocol": "http",
+			"host": [
+				"localhost"
+			],
+			"port": "3000",
+			"path": [
+				"api",
+				"leave-requests"
+			]
+		}
+	}
+}
+

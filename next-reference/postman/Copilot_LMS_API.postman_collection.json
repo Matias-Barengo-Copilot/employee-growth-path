@@ -1,0 +1,300 @@
+{
+	"info": {
+		"_postman_id": "copilot-lms-api-collection",
+		"name": "Copilot LMS API",
+		"description": "Complete API collection for Leaves Management System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Employees",
+			"item": [
+				{
+					"name": "Create Employee (HR Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"clerkId\": \"user_2abc123def456\",\n  \"companyId\": \"{{companyId}}\",\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"country\": \"USA\",\n  \"role\": \"employee\",\n  \"employeeNumber\": \"EMP001\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/employees",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"employees"
+							]
+						},
+						"description": "Create a new employee. Only HR can create employees."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Employees",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/employees",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"employees"
+							]
+						},
+						"description": "Get list of employees based on user role:\n- HR: All employees\n- MD: Employees in their company\n- Others: Only themselves"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Employee by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/employees/{{employeeId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"employees",
+								"{{employeeId}}"
+							]
+						},
+						"description": "Get employee details by ID. Authorization:\n- HR: Can see all\n- MD: Can see employees in their company\n- Others: Can only see themselves"
+					},
+					"response": []
+				}
+			],
+			"description": "Employee management endpoints"
+		},
+		{
+			"name": "Leave Requests",
+			"item": [
+				{
+					"name": "Submit Leave Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"leaveType\": \"annual\",\n  \"fromDate\": \"2024-02-15\",\n  \"toDate\": \"2024-02-20\",\n  \"totalDays\": 5,\n  \"reason\": \"Family vacation\",\n  \"projects\": [\n    {\n      \"projectId\": \"{{projectId}}\",\n      \"informedPm\": true,\n      \"informedTechLead\": false\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/leave-requests",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"leave-requests"
+							]
+						},
+						"description": "Submit a new leave request. Automatically creates approval records for:\n- Project supervisors\n- Company MD\n- HR\n\nLeave types: annual, sick, unpaid, other"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Leave Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/leave-requests?status=pending&page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"leave-requests"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "Filter by status: pending, approved, rejected, cancelled"
+								},
+								{
+									"key": "employeeId",
+									"value": "",
+									"description": "Filter by employee ID",
+									"disabled": true
+								},
+								{
+									"key": "companyId",
+									"value": "",
+									"description": "Filter by company ID",
+									"disabled": true
+								},
+								{
+									"key": "organizationId",
+									"value": "",
+									"description": "Filter by organization ID",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get list of leave requests based on user role:\n- HR: All requests in organization\n- MD: All requests in their company\n- Supervisor: Requests for their projects\n- Employee: Only their own requests"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Leave Request by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/leave-requests/{{leaveRequestId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"leave-requests",
+								"{{leaveRequestId}}"
+							]
+						},
+						"description": "Get leave request details with projects and approvals"
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Leave Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"approved\",\n  \"comments\": \"Approved. Enjoy your vacation!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/leave-requests/{{leaveRequestId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"leave-requests",
+								"{{leaveRequestId}}",
+								"approve"
+							]
+						},
+						"description": "Approve or reject a leave request.\n\nAuthorization:\n- HR: Can approve any request\n- MD: Can approve requests in their company\n- Supervisor: Can approve requests for their projects\n\nStatus: \"approved\" or \"rejected\"\n\nLeave request is automatically approved when ALL approvers approve."
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Leave Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"rejected\",\n  \"comments\": \"Cannot approve due to project deadline.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/leave-requests/{{leaveRequestId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"leave-requests",
+								"{{leaveRequestId}}",
+								"approve"
+							]
+						},
+						"description": "Reject a leave request with comments"
+					},
+					"response": []
+				},
+				{
+					"name": "Withdraw Leave Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/leave-requests/{{leaveRequestId}}/withdraw",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"leave-requests",
+								"{{leaveRequestId}}",
+								"withdraw"
+							]
+						},
+						"description": "Withdraw a leave request. Only the requester can withdraw.\n\nCannot withdraw if:\n- HR has already approved\n- Request is already approved"
+					},
+					"response": []
+				}
+			],
+			"description": "Leave request management endpoints"
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "employeeId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "leaveRequestId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "companyId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "projectId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+

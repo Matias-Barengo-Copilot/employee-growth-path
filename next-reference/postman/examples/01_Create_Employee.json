@@ -1,0 +1,29 @@
+{
+	"name": "Create Employee - Example",
+	"request": {
+		"method": "POST",
+		"header": [
+			{
+				"key": "Content-Type",
+				"value": "application/json"
+			}
+		],
+		"body": {
+			"mode": "raw",
+			"raw": "{\n  \"clerkId\": \"user_2abc123def456\",\n  \"companyId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"country\": \"USA\",\n  \"role\": \"employee\",\n  \"employeeNumber\": \"EMP001\"\n}"
+		},
+		"url": {
+			"raw": "http://localhost:3000/api/employees",
+			"protocol": "http",
+			"host": [
+				"localhost"
+			],
+			"port": "3000",
+			"path": [
+				"api",
+				"employees"
+			]
+		}
+	}
+}
+
