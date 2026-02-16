@@ -1,2 +1,4 @@
-export const isTestModeEnabled = () => process.env.NEXT_PUBLIC_TEST_MODE === 'true';
-export const isTestModeEnabledServer = () => process.env.NEXT_PUBLIC_TEST_MODE === 'true';
+const TEST_MODE = true;
+
+export const isTestModeEnabled = () => TEST_MODE;
+export const isTestModeEnabledServer = () => TEST_MODE;
