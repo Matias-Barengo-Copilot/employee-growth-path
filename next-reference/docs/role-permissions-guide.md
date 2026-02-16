@@ -149,20 +149,7 @@
 
 ---
 
-## 10. Settings
-
-| Accion / Elemento | HR (Admin) | Supervisor | Employee |
-|---|---|---|---|
-| Editar su propio perfil | Si | Si | Si |
-| Cambiar apariencia (dark/light mode) | Si | Si | Si |
-| Configurar notificaciones personales | Si | Si | Si |
-| Gestionar configuracion de la organizacion | Si | No | No |
-| Gestionar equipos (crear, editar, eliminar) | Si | No | No |
-| Gestionar roles de empleados | Si | No | No |
-
----
-
-## 11. XP & Rewards System
+## 10. XP & Rewards System
 
 | Accion / Elemento | HR (Admin) | Supervisor | Employee |
 |---|---|---|---|
@@ -175,7 +162,7 @@
 
 ---
 
-## 12. AI Coach
+## 11. AI Coach
 
 | Accion / Elemento | HR (Admin) | Supervisor | Employee |
 |---|---|---|---|
@@ -195,7 +182,6 @@
 3. **Gestion de Equipos** - CRUD de equipos
 4. **Ajuste de Balances** - Modificar balances de tiempo libre
 5. **Moderacion de Feedback** - Ver remitente real del feedback anonimo
-6. **Configuracion Organizacional** - Parametros globales de la app
 
 ### Solo Supervisores (y HR)
 
@@ -214,7 +200,7 @@
 5. **Feedback** - Dar, recibir y solicitar feedback
 6. **Career Growth** - Su journey personal con milestones, journal, skills y badges
 7. **Time Off** - Solicitar tiempo libre y ver sus balances
-8. **Perfil/Settings** - Editar su informacion personal y preferencias
+8. **Perfil** - Editar su informacion personal y preferencias
 9. **Activity Feed** - Ver la actividad de la compania
 10. **AI Coach** - Asistente de carrera contextual
 11. **Voice Input** - Entrada por voz en todos los campos de texto

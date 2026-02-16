@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bell, User, Settings, LogOut } from 'lucide-react';
+import { Bell, User, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   /** User's full name */
@@ -26,7 +26,7 @@ interface HeaderProps {
  * Features:
  * - User avatar (from Clerk)
  * - User name and role display
- * - Dropdown menu with Profile, Settings, and Logout
+ * - Dropdown menu with Profile and Logout
  * - Notifications icon (placeholder for future)
  * - Mobile-responsive design
  * 
@@ -102,10 +102,6 @@ export function Header({ userName, userEmail }: HeaderProps) {
           <DropdownMenuItem disabled>
             <User className="mr-2 h-4 w-4" />
             <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut}>

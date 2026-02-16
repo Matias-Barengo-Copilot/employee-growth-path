@@ -3,8 +3,6 @@ import {
   List,
   CheckCircle,
   UserPlus,
-  Settings,
-  TestTube,
   BarChart3,
   LayoutDashboard,
   Target,
@@ -14,7 +12,6 @@ import {
   Calendar,
 } from 'lucide-react';
 import { NavigationItem, UserRole } from '@/lib/types/navigation';
-import { isTestModeEnabled } from '@/lib/utils/test-mode';
 
 export type NavigationSection = {
   label: string;
@@ -101,18 +98,7 @@ const baseNavigationItems: NavigationItem[] = [
     roles: ["hr"],
     exactMatch: false,
   },
-  {
-    label: "Settings",
-    href: "/settings",
-    icon: Settings,
-    roles: ["hr"],
-    exactMatch: false,
-  },
 ];
-
-function getNavigationItems(): NavigationItem[] {
-  return isTestModeEnabled() ? [...baseNavigationItems, { label: 'Test Users', href: '/test-users', icon: TestTube, roles: ['hr'] as UserRole[], exactMatch: false }] : baseNavigationItems;
-}
 
 export const navigationItems: NavigationItem[] = baseNavigationItems;
 
@@ -131,7 +117,7 @@ export function getNavigationItemsByRole(
   const canViewAll = options?.canViewAllLeaveRequests ?? false;
   const seenKeys = new Set<string>();
 
-  const items = getNavigationItems().reduce<NavigationItem[]>((acc, item) => {
+  const items = baseNavigationItems.reduce<NavigationItem[]>((acc, item) => {
     if (!item.roles.includes(role)) return acc;
 
     if (item.children) {

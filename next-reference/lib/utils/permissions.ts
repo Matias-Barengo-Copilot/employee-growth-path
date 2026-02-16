@@ -27,7 +27,6 @@ export const rolePermissions = {
     'create_employees',
     'edit_employees',
     'view_all_employees',
-    'manage_slack_settings',
   ],
 } as const;
 
@@ -46,8 +45,7 @@ export type Permission =
   | 'reverse_all_approval'
   | 'create_employees'
   | 'edit_employees'
-  | 'view_all_employees'
-  | 'manage_slack_settings';
+  | 'view_all_employees';
 
 /**
  * Verifica si un usuario tiene un permiso específico
@@ -85,7 +83,6 @@ export function canAccessRoute(role: UserRole, route: string): boolean {
   const routePermissions: Record<string, Permission[]> = {
     '/employees/create': ['create_employees'],
     '/employees': ['view_all_employees'],
-    '/settings': ['manage_slack_settings'],
   };
 
   for (const [routePattern, requiredPermissions] of Object.entries(routePermissions)) {

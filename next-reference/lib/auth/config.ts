@@ -1,52 +1,19 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from '@/db/client';
 import { employees } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { detectAndSetInitialAdmin } from '@/lib/services/admin.service';
-import { isTestModeEnabledServer } from '@/lib/utils/test-mode';
 
-/**
- * NextAuth configuration with Google OAuth
- * 
- * Features:
- * - Google OAuth authentication
- * - Email domain restriction (@copilotinnovations.com, @getboss.io)
- * - Database user verification
- * - Automatic initial admin creation
- * - Session management with user data
- * 
- * TEST MODE: When enabled (via lib/utils/test-mode.ts), allows:
- * - Credentials provider for direct sign-in without Google
- * - Any email domain (not just @copilotinnovations.com)
- * - Users created via test admin page
- */
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    ...(isTestModeEnabledServer() ? [CredentialsProvider({
-      name: 'Test Account',
-      credentials: { email: { label: 'Email', type: 'email' } },
-            async authorize(credentials) {
-              const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
-              if (!dbUrl || dbUrl.includes('dummy') || !credentials?.email) return null;
-              try {
-                const [employee] = await db.select().from(employees).where(and(eq(employees.email, credentials.email), eq(employees.isActive, true))).limit(1);
-                return employee ? { id: employee.id, email: employee.email, name: employee.name } : null;
-              } catch (error) {
-                console.error('Error in test credentials authorize:', error);
-                return null;
-              }
-            },
-    })] : []),
   ],
   callbacks: {
     async signIn({ user, account }) {
-      // Skip database queries during build time
       const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
       if (!dbUrl || dbUrl.includes('dummy')) {
         return false;
@@ -56,14 +23,12 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      // Allow emails from @copilotinnovations.com and @getboss.io domains
       const allowedDomains = ['@copilotinnovations.com', '@getboss.io'];
-      if (!isTestModeEnabledServer() && !allowedDomains.some(domain => user.email!.endsWith(domain))) {
+      if (!allowedDomains.some(domain => user.email!.endsWith(domain))) {
         return false;
       }
 
       try {
-        // Buscar empleado activo en la base de datos
         const [employee] = await db
           .select()
           .from(employees)
@@ -71,12 +36,10 @@ export const authOptions: NextAuthOptions = {
           .limit(1);
 
         if (!employee) {
-          if (isTestModeEnabledServer()) return false;
           const isInitialAdmin = await detectAndSetInitialAdmin(user.email, user.name || user.email.split('@')[0]);
           if (!isInitialAdmin) return false;
         }
 
-        // Actualizar googleId si no está establecido
         if (account?.providerAccountId && (!employee || !employee.googleId)) {
           await db
             .update(employees)
@@ -84,10 +47,10 @@ export const authOptions: NextAuthOptions = {
             .where(eq(employees.email, user.email));
         }
 
-        return true; // Permitir sign-in
+        return true;
       } catch (error) {
         console.error('Error during sign-in:', error);
-        return false; // Rechazar en caso de error
+        return false;
       }
     },
     async session({ session }) {
@@ -96,7 +59,6 @@ export const authOptions: NextAuthOptions = {
         return session;
       }
 
-      // Agregar datos del empleado activo a la sesión
       if (session.user?.email) {
         try {
           const [employee] = await db
@@ -111,7 +73,6 @@ export const authOptions: NextAuthOptions = {
             .limit(1);
 
           if (employee) {
-            // Type assertion needed because we extended the types
             const user = session.user as typeof session.user & {
               id: string;
               employeeId: string;
@@ -140,4 +101,3 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
-

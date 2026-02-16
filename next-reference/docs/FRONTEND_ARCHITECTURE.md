@@ -54,16 +54,10 @@
 #### 1.4 Notifications
 - ✅ **Slack integration** (Backend implemented - SlackNotificationProvider exists)
 - ✅ **Email notifications** (Backend implemented - EmailNotificationProvider exists)
-- ⚠️ Notification preferences/settings UI (not mentioned in API)
 
 #### 1.5 Slack Automations
-- ❌ **Birthday alerts** (Backend cron job, but needs admin UI for settings)
-- ❌ **Work anniversary alerts** (Backend cron job, but needs admin UI for settings)
-- ❌ **Admin settings page** for:
-  - Channel selection
-  - Enable/disable toggles
-  - Time of day picker
-  - Message templates
+- ❌ **Birthday alerts** (Backend cron job needed)
+- ❌ **Work anniversary alerts** (Backend cron job needed)
 
 ### 2. User Roles & Permissions Matrix
 
@@ -77,7 +71,6 @@
 | Reverse Approval | ❌ | ✅ (before HR) | ✅ (before HR) | ✅ (anytime) |
 | Create Employees | ❌ | ❌ | ❌ | ✅ |
 | Edit Employees | ❌ | ❌ | ❌ | ✅ |
-| Manage Slack Settings | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -120,13 +113,6 @@ GET /api/projects?employeeId=xxx (projects assigned to employee)
 ✅ PUT /api/leave-requests/draft/[id] - Update draft (implemented)
 ✅ DELETE /api/leave-requests/draft/[id] - Delete draft (implemented)
 ✅ POST /api/leave-requests/draft/[id]/submit - Submit draft (implemented)
-```
-
-#### 5. Slack Settings (Admin)
-```
-GET /api/settings/slack
-PUT /api/settings/slack
-POST /api/settings/slack/test
 ```
 
 ### API Endpoints Available (Ready to Use)
@@ -205,10 +191,6 @@ app/
 │   │   │   └── page.tsx            # Own requests (shared)
 │   │   └── all-requests/
 │   │       └── page.tsx            # Other requests (Supervisor/MD/HR)
-│   └── settings/                   # HR only
-│       ├── slack/
-│       │   └── page.tsx            # Slack automation settings
-│       └── page.tsx
 ├── api/                            # API routes (existing)
 └── ...
 
@@ -408,7 +390,7 @@ lib/
 - Employee: Submit, My Requests
 - Supervisor: Submit, My Requests, Approve Requests, Other Requests
 - MD: Submit, My Requests, Approve Requests, Other Requests
-- HR: Create Employee, Submit, Approve Requests, All Requests, Settings
+- HR: Create Employee, Submit, Approve Requests, All Requests
 
 **`Header.tsx`** - Dashboard header
 - User info
@@ -497,8 +479,6 @@ Each page should:
 - `/requests/all-requests` - View all requests
 - `/leave-requests/[id]` - View/approve request detail
 - `/leave-requests/[id]/approve` - Final approval action
-- `/settings` - Settings page
-- `/settings/slack` - Slack automation settings
 
 **Features:**
 - All MD features
@@ -508,7 +488,6 @@ Each page should:
 - View all requests in organization
 - Final approve/reject requests
 - Reverse final approval anytime
-- Manage Slack automation settings
 
 **Components Used:**
 - All MD components
@@ -517,7 +496,6 @@ Each page should:
 - `EmployeeTable`
 - `BulkImportDialog`
 - `ApprovalActions` (HR variant)
-- Slack settings components
 
 ---
 
@@ -752,13 +730,7 @@ export function LeaveRequestForm({ onSubmit }: Props) {
    - Column mapping UI
    - Import preview
 
-3. **Slack Settings** (when API available)
-   - Settings page
-   - Slack configuration form
-   - Message template editor
-   - Test functionality
-
-4. ~~**Half-Day Option**~~ ✅ (Implemented)
+3. ~~**Half-Day Option**~~ ✅ (Implemented)
    - ✅ Calendar supports half-day selection per day
    - ✅ Morning/afternoon options available
    - ✅ API fully supports half-day requests
@@ -1037,8 +1009,7 @@ export class ApiError extends Error {
 2. **Project List Endpoint** - Required for leave request form (currently using project name input)
 3. **Approval Reversal Endpoint** - Required for reversal workflow
 4. ~~**Draft Management Endpoints**~~ - ✅ Implemented
-5. **Slack Settings Endpoints** - Future feature (for admin UI)
-6. ~~**Employee Schema Updates**~~ - ✅ Birthday, joining date, supervisors all exist in schema
+5. ~~**Employee Schema Updates**~~ - ✅ Birthday, joining date, supervisors all exist in schema
 
 ### Frontend Implementation Status
 
@@ -1061,7 +1032,6 @@ export class ApiError extends Error {
 ❌ **Not Implemented:**
 - Approval reversal (no API)
 - Bulk employee import (no API)
-- Slack settings UI (no API)
 - Project assignment dates (not in schema)
 
 ---

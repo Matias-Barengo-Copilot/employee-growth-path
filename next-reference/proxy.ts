@@ -41,8 +41,6 @@ export default withAuth(
           '/employees',
           '/leave-requests',
           '/requests',
-          '/settings',
-          '/test-users',
         ];
         const isDashboardRoute = pathname === '/' || dashboardRoutes.some(route => pathname.startsWith(route));
         const isApiRoute = pathname.startsWith('/api');
