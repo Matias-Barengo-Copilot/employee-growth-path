@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 if (process.env.RUN_NEXT === "true") {
   const env = {
     ...process.env,
-    DATABASE_URL: process.env.NEXT_DATABASE_URL || process.env.DATABASE_URL,
+    DATABASE_URL: process.env.NEON_DATABASE_URL || process.env.DATABASE_URL,
     PORT: "5000",
   };
   console.log("Starting Next.js app from next-reference/...");
