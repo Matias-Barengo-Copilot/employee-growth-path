@@ -88,8 +88,8 @@ export const allLeaveRequestsFilters: FilterConfig[] = [
   {
     key: 'employeeId',
     type: 'autocomplete',
-    label: 'Employee',
-    placeholder: 'Select employee',
+    label: 'Member',
+    placeholder: 'Select member',
     visibleForRoles: ['hr'],
     fetchOptions: '/api/employees',
     optionLabel: (item: { id: string; name?: string; email?: string; [key: string]: unknown }) => {
@@ -111,7 +111,7 @@ export const employeesFilters: FilterConfig[] = [
     label: 'Role',
     placeholder: 'All roles',
     options: [
-      { value: 'employee', label: 'Employee' },
+      { value: 'employee', label: 'Member' },
       { value: 'supervisor', label: 'Supervisor' },
       { value: 'hr', label: 'HR' },
     ],
