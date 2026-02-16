@@ -37,8 +37,18 @@ export const UpdateEmployeeDto = z.object({
   country: z.string().min(1).optional(),
   role: z.enum(["employee", "supervisor", "hr"]).optional(),
   roleType: z.enum(["employee", "individual_contractor"]).optional(),
-  joiningDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
-  birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
+  joiningDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  title: z.string().max(255).optional().nullable(),
+  location: z.string().max(255).optional().nullable(),
+  timezone: z.string().max(100).optional().nullable(),
+  slackHandle: z.string().max(100).optional().nullable(),
+  whatIDo: z.string().max(500).optional().nullable(),
+  workingPreferences: z.string().max(500).optional().nullable(),
+  currentlyWorkingOn: z.string().max(200).optional().nullable(),
+  strengths: z.array(z.string()).optional().nullable(),
+  funFacts: z.array(z.string()).optional().nullable(),
+  profileImageUrl: z.string().optional().nullable(),
 });
 
 // Simplified project model for leave requests

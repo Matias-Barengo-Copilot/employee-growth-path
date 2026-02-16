@@ -13,6 +13,16 @@ export interface EmployeeDetail {
   roleType: 'employee' | 'individual_contractor';
   joiningDate: string | null;
   birthday: string | null;
+  title: string | null;
+  location: string | null;
+  timezone: string | null;
+  slackHandle: string | null;
+  whatIDo: string | null;
+  workingPreferences: string | null;
+  currentlyWorkingOn: string | null;
+  strengths: string[] | null;
+  funFacts: string[] | null;
+  profileImageUrl: string | null;
   usedVacationDays?: number;
   lastVacationResetDate?: string | null;
 }
@@ -223,6 +233,16 @@ export interface UpdateEmployeeInput {
   roleType?: 'employee' | 'individual_contractor';
   joiningDate?: string;
   birthday?: string;
+  title?: string | null;
+  location?: string | null;
+  timezone?: string | null;
+  slackHandle?: string | null;
+  whatIDo?: string | null;
+  workingPreferences?: string | null;
+  currentlyWorkingOn?: string | null;
+  strengths?: string[] | null;
+  funFacts?: string[] | null;
+  profileImageUrl?: string | null;
 }
 
 export interface UpdateEmployeeResponse {

@@ -65,13 +65,18 @@ export class EmployeeService {
   }
 
   async updateEmployee(id: string, data: UpdateEmployeeInput, user: AuthenticatedUser) {
-    if (user.role !== "hr") {
-      throw new ForbiddenError("Only HR can update employees");
+    if (user.role !== "hr" && user.employeeId !== id) {
+      throw new ForbiddenError("Only HR or the profile owner can update employees");
     }
 
     const employee = await this.employeeRepository.findById(id);
     if (!employee) {
       throw new Error("Employee not found");
+    }
+
+    if (user.employeeId === id && user.role !== "hr") {
+      const { name, email, country, role, roleType, joiningDate, birthday, ...profileFields } = data;
+      return this.employeeRepository.update(id, profileFields);
     }
 
     return this.employeeRepository.update(id, data);

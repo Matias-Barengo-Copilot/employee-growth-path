@@ -32,7 +32,6 @@ export async function PUT(
   try {
     const { id } = await params;
     const user = await getAuthenticatedUser();
-    requireRole(user, ['hr']);
 
     const body = await request.json();
     const data = UpdateEmployeeDto.parse(body);
