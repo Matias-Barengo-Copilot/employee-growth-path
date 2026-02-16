@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { eq, and, count, or, inArray, desc } from "drizzle-orm";
+import { eq, and, count, or, ne, desc } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/middleware/auth";
 import { db } from "@/db/client";
 import { goals, employees, activities } from "@/db/schema";
@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
     const conditions = [eq(goals.companyId, user.companyId)];
 
     if (scope === 'team') {
+      conditions.push(ne(goals.employeeId, user.employeeId));
+
       const visibilityConditions = [
         eq(goals.visibility, 'team' as const),
       ];
@@ -36,10 +38,6 @@ export async function GET(request: NextRequest) {
       if (user.role === 'supervisor' || user.role === 'hr') {
         visibilityConditions.push(eq(goals.visibility, 'manager' as const));
       }
-
-      visibilityConditions.push(
-        eq(goals.employeeId, user.employeeId)
-      );
 
       conditions.push(or(...visibilityConditions)!);
     } else {

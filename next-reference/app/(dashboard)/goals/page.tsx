@@ -371,14 +371,14 @@ export default function GoalsPage() {
               return (
                 <Card
                   key={goal.id}
-                  className={`transition-shadow hover:shadow-md ${isOwner ? 'cursor-pointer' : ''}`}
-                  onClick={() => isOwner ? openEdit(goal) : undefined}
+                  className={`transition-shadow hover:shadow-md ${!isTeamView ? 'cursor-pointer' : ''}`}
+                  onClick={() => !isTeamView ? openEdit(goal) : undefined}
                   data-testid={`card-goal-${goal.id}`}
                 >
                   <CardHeader>
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <CardTitle className="text-sm">{goal.title}</CardTitle>
-                      {isOwner && <Pencil className="size-3.5 text-muted-foreground shrink-0" />}
+                      {!isTeamView && <Pencil className="size-3.5 text-muted-foreground shrink-0" />}
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge
@@ -412,7 +412,6 @@ export default function GoalsPage() {
                         </Avatar>
                         <span className="text-xs text-muted-foreground">
                           {goal.employeeName}
-                          {isOwner && ' (You)'}
                         </span>
                       </div>
                     )}
