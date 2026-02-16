@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Target, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Target, Plus, Pencil, Trash2, Users, User } from 'lucide-react';
 import { useToast } from '@/lib/hooks/useToast';
 import { Pagination } from '@/components/shared/pagination/Pagination';
 import { usePagination } from '@/lib/hooks/usePagination';
@@ -45,6 +48,7 @@ interface Goal {
 }
 
 type Category = 'all' | 'growth' | 'delivery' | 'leadership' | 'learning';
+type Scope = 'my' | 'team';
 
 interface GoalFormData {
   title: string;
@@ -101,17 +105,35 @@ const CATEGORY_LABELS: Record<string, string> = {
   learning: 'Learning',
 };
 
+const VISIBILITY_LABELS: Record<string, string> = {
+  private: 'Private',
+  manager: 'Manager',
+  team: 'Team',
+};
+
 const CATEGORIES: Category[] = ['all', 'growth', 'delivery', 'leadership', 'learning'];
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 export default function GoalsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const { page, limit, handlePageChange, handleItemsPerPageChange } = usePagination({
     defaultPage: 1,
     defaultLimit: 20,
   });
 
   const categoryParam = searchParams.get('category') as Category | null;
+  const scopeParam = searchParams.get('scope') as Scope | null;
+
+  const currentEmployeeId = session?.user?.employeeId;
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
@@ -119,6 +141,7 @@ export default function GoalsPage() {
   const [activeCategory, setActiveCategory] = useState<Category>(
     categoryParam && ['growth', 'delivery', 'leadership', 'learning'].includes(categoryParam) ? categoryParam : 'all'
   );
+  const [scope, setScope] = useState<Scope>(scopeParam === 'team' ? 'team' : 'my');
   const [createOpen, setCreateOpen] = useState(false);
   const [editGoal, setEditGoal] = useState<Goal | null>(null);
   const [formData, setFormData] = useState<GoalFormData>(EMPTY_FORM);
@@ -137,10 +160,22 @@ export default function GoalsPage() {
     router.push(`?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
+  const handleScopeChange = useCallback((newScope: string) => {
+    setScope(newScope as Scope);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('page');
+    if (newScope === 'team') {
+      params.set('scope', 'team');
+    } else {
+      params.delete('scope');
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
   const fetchGoals = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+      const params = new URLSearchParams({ page: page.toString(), limit: limit.toString(), scope });
       if (activeCategory !== 'all') {
         params.set('category', activeCategory);
       }
@@ -155,7 +190,7 @@ export default function GoalsPage() {
     } finally {
       setLoading(false);
     }
-  }, [error, page, limit, activeCategory]);
+  }, [error, page, limit, activeCategory, scope]);
 
   useEffect(() => {
     fetchGoals();
@@ -261,18 +296,33 @@ export default function GoalsPage() {
     }
   }
 
+  const isTeamView = scope === 'team';
+
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Target className="size-5 text-muted-foreground" />
-          <h1 className="text-xl font-semibold" data-testid="text-page-title">My Goals</h1>
+          <h1 className="text-xl font-semibold" data-testid="text-page-title">Goals</h1>
         </div>
         <Button onClick={openCreate} data-testid="button-add-goal">
           <Plus />
           Add Goal
         </Button>
       </div>
+
+      <Tabs value={scope} onValueChange={handleScopeChange}>
+        <TabsList data-testid="tabs-scope">
+          <TabsTrigger value="my" data-testid="tab-my-goals">
+            <User className="size-4 mr-1.5" />
+            My Goals
+          </TabsTrigger>
+          <TabsTrigger value="team" data-testid="tab-team-goals">
+            <Users className="size-4 mr-1.5" />
+            Team Goals
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="flex flex-wrap items-center gap-2" data-testid="filter-category-bar">
         {CATEGORIES.map((cat) => (
@@ -307,66 +357,91 @@ export default function GoalsPage() {
       ) : goals.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground" data-testid="text-empty-state">
           <Target className="size-10" />
-          <p className="text-sm">No goals found. Create your first goal to get started.</p>
+          <p className="text-sm">
+            {isTeamView
+              ? 'No team goals found. Goals shared with the team or manager will appear here.'
+              : 'No goals found. Create your first goal to get started.'}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {goals.map((goal) => (
-              <Card
-                key={goal.id}
-                className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => openEdit(goal)}
-                data-testid={`card-goal-${goal.id}`}
-              >
-                <CardHeader>
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <CardTitle className="text-sm">{goal.title}</CardTitle>
-                    <Pencil className="size-3.5 text-muted-foreground shrink-0" />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge
-                      variant="outline"
-                      className={CATEGORY_COLORS[goal.category]}
-                      data-testid={`badge-category-${goal.id}`}
-                    >
-                      {CATEGORY_LABELS[goal.category]}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className={STATUS_COLORS[goal.status]}
-                      data-testid={`badge-status-${goal.id}`}
-                    >
-                      {STATUS_LABELS[goal.status]}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {goal.description && (
-                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2" data-testid={`text-description-${goal.id}`}>
-                      {goal.description}
-                    </p>
-                  )}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                      <span>Progress</span>
-                      <span data-testid={`text-progress-${goal.id}`}>{goal.progress}%</span>
+            {goals.map((goal) => {
+              const isOwner = goal.employeeId === currentEmployeeId;
+              return (
+                <Card
+                  key={goal.id}
+                  className={`transition-shadow hover:shadow-md ${isOwner ? 'cursor-pointer' : ''}`}
+                  onClick={() => isOwner ? openEdit(goal) : undefined}
+                  data-testid={`card-goal-${goal.id}`}
+                >
+                  <CardHeader>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <CardTitle className="text-sm">{goal.title}</CardTitle>
+                      {isOwner && <Pencil className="size-3.5 text-muted-foreground shrink-0" />}
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-muted" data-testid={`progress-bar-${goal.id}`}>
-                      <div
-                        className={`h-full rounded-full transition-all ${PROGRESS_BAR_COLORS[goal.status]}`}
-                        style={{ width: `${goal.progress}%` }}
-                      />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge
+                        variant="outline"
+                        className={CATEGORY_COLORS[goal.category]}
+                        data-testid={`badge-category-${goal.id}`}
+                      >
+                        {CATEGORY_LABELS[goal.category]}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={STATUS_COLORS[goal.status]}
+                        data-testid={`badge-status-${goal.id}`}
+                      >
+                        {STATUS_LABELS[goal.status]}
+                      </Badge>
+                      {isTeamView && (
+                        <Badge variant="outline" data-testid={`badge-visibility-${goal.id}`}>
+                          {VISIBILITY_LABELS[goal.visibility]}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                  {goal.dueDate && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Due: {new Date(goal.dueDate).toLocaleDateString()}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent>
+                    {isTeamView && (
+                      <div className="flex items-center gap-2 mb-3" data-testid={`text-owner-${goal.id}`}>
+                        <Avatar className="size-5">
+                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                            {getInitials(goal.employeeName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground">
+                          {goal.employeeName}
+                          {isOwner && ' (You)'}
+                        </span>
+                      </div>
+                    )}
+                    {goal.description && (
+                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2" data-testid={`text-description-${goal.id}`}>
+                        {goal.description}
+                      </p>
+                    )}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span>Progress</span>
+                        <span data-testid={`text-progress-${goal.id}`}>{goal.progress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted" data-testid={`progress-bar-${goal.id}`}>
+                        <div
+                          className={`h-full rounded-full transition-all ${PROGRESS_BAR_COLORS[goal.status]}`}
+                          style={{ width: `${goal.progress}%` }}
+                        />
+                      </div>
+                    </div>
+                    {goal.dueDate && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Due: {new Date(goal.dueDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
@@ -490,9 +565,9 @@ function GoalForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="private">Private</SelectItem>
-              <SelectItem value="manager">Manager</SelectItem>
-              <SelectItem value="team">Team</SelectItem>
+              <SelectItem value="private">Private (only you)</SelectItem>
+              <SelectItem value="manager">Manager (supervisors & HR)</SelectItem>
+              <SelectItem value="team">Team (everyone)</SelectItem>
             </SelectContent>
           </Select>
         </div>

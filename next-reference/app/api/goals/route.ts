@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, or, inArray, desc } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/middleware/auth";
 import { db } from "@/db/client";
 import { goals, employees, activities } from "@/db/schema";
@@ -24,11 +24,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { page, limit } = parsePaginationParams(searchParams);
     const category = searchParams.get('category');
+    const scope = searchParams.get('scope') || 'my';
 
-    const conditions = [
-      eq(goals.employeeId, user.employeeId),
-      eq(goals.companyId, user.companyId),
-    ];
+    const conditions = [eq(goals.companyId, user.companyId)];
+
+    if (scope === 'team') {
+      const visibilityConditions = [
+        eq(goals.visibility, 'team' as const),
+      ];
+
+      if (user.role === 'supervisor' || user.role === 'hr') {
+        visibilityConditions.push(eq(goals.visibility, 'manager' as const));
+      }
+
+      visibilityConditions.push(
+        eq(goals.employeeId, user.employeeId)
+      );
+
+      conditions.push(or(...visibilityConditions)!);
+    } else {
+      conditions.push(eq(goals.employeeId, user.employeeId));
+    }
 
     if (category && ['growth', 'delivery', 'leadership', 'learning'].includes(category)) {
       conditions.push(eq(goals.category, category as 'growth' | 'delivery' | 'leadership' | 'learning'));
@@ -64,7 +80,7 @@ export async function GET(request: NextRequest) {
       .from(goals)
       .innerJoin(employees, eq(goals.employeeId, employees.id))
       .where(whereClause)
-      .orderBy(goals.createdAt)
+      .orderBy(desc(goals.updatedAt))
       .limit(limit)
       .offset(paginationOffset(pagination.page, limit));
 
