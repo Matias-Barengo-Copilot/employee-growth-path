@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { eq, and, or, desc, aliasedTable } from "drizzle-orm";
+import { eq, and, or, desc, aliasedTable, count, SQL } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/middleware/auth";
 import { db } from "@/db/client";
 import { feedbackRequests, employees, activities } from "@/db/schema";
 import { successResponse, errorResponse } from "@/lib/utils/response";
+import { parsePaginationParams, buildPaginationMeta, paginationOffset } from "@/lib/utils/pagination";
 
 const createFeedbackRequestSchema = z.object({
   responderId: z.string().uuid(),
@@ -15,9 +16,37 @@ const createFeedbackRequestSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
+    const { searchParams } = new URL(request.url);
+    const { page, limit } = parsePaginationParams(searchParams);
+    const direction = searchParams.get('direction');
 
     const requesters = aliasedTable(employees, "requesters");
     const responders = aliasedTable(employees, "responders");
+
+    const conditions: SQL[] = [eq(feedbackRequests.companyId, user.companyId)];
+
+    if (direction === 'to_me') {
+      conditions.push(eq(feedbackRequests.responderId, user.employeeId));
+    } else if (direction === 'from_me') {
+      conditions.push(eq(feedbackRequests.requesterId, user.employeeId));
+    } else {
+      conditions.push(
+        or(
+          eq(feedbackRequests.requesterId, user.employeeId),
+          eq(feedbackRequests.responderId, user.employeeId)
+        )!
+      );
+    }
+
+    const whereClause = and(...conditions)!;
+
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(feedbackRequests)
+      .where(whereClause);
+
+    const total = totalResult?.count ?? 0;
+    const pagination = buildPaginationMeta(total, page, limit);
 
     const result = await db
       .select({
@@ -35,18 +64,12 @@ export async function GET(request: NextRequest) {
       .from(feedbackRequests)
       .innerJoin(requesters, eq(feedbackRequests.requesterId, requesters.id))
       .innerJoin(responders, eq(feedbackRequests.responderId, responders.id))
-      .where(
-        and(
-          eq(feedbackRequests.companyId, user.companyId),
-          or(
-            eq(feedbackRequests.requesterId, user.employeeId),
-            eq(feedbackRequests.responderId, user.employeeId)
-          )
-        )
-      )
-      .orderBy(desc(feedbackRequests.createdAt));
+      .where(whereClause)
+      .orderBy(desc(feedbackRequests.createdAt))
+      .limit(limit)
+      .offset(paginationOffset(pagination.page, limit));
 
-    return successResponse(result);
+    return successResponse({ data: result, pagination });
   } catch (error) {
     return errorResponse(error);
   }
