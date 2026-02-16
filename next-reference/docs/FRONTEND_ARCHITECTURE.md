@@ -168,14 +168,14 @@ GET /api/projects?employeeId=xxx (projects assigned to employee)
 app/
 ├── (dashboard)/                    # Protected dashboard routes
 │   ├── layout.tsx                  # Dashboard layout with sidebar
-│   ├── employees/                  # HR only
+│   ├── employees/                  # Directory - viewable by all roles, edit by HR only
 │   │   ├── create/
 │   │   │   └── page.tsx
 │   │   ├── [id]/
 │   │   │   ├── edit/
 │   │   │   │   └── page.tsx
 │   │   │   └── page.tsx            # Employee detail view
-│   │   └── page.tsx                # Employee list (HR)
+│   │   └── page.tsx                # Directory list (all roles)
 │   ├── leave-requests/
 │   │   ├── submit/
 │   │   │   └── page.tsx            # Shared form
@@ -471,10 +471,10 @@ Each page should:
 ### HR Dashboard
 
 **Routes:**
-- `/employees` - Employee list
-- `/employees/create` - Create employee
-- `/employees/[id]` - Employee detail
-- `/employees/[id]/edit` - Edit employee
+- `/employees` - Directory listing (view only for non-HR roles)
+- `/employees/create` - Create employee (HR only)
+- `/employees/[id]` - Employee detail (viewable by all roles)
+- `/employees/[id]/edit` - Edit employee (HR only)
 - `/leave-requests/submit` - Submit own leave request
 - `/requests/all-requests` - View all requests
 - `/leave-requests/[id]` - View/approve request detail
@@ -482,19 +482,20 @@ Each page should:
 
 **Features:**
 - All MD features
-- Create employees
-- Edit employees
-- Bulk import employees (when API available)
+- Create employees (HR only)
+- Edit employees (HR only)
+- Access to directory viewing by all roles (HR can perform admin functions)
+- Bulk import employees (when API available, HR only)
 - View all requests in organization
 - Final approve/reject requests
 - Reverse final approval anytime
 
 **Components Used:**
 - All MD components
-- `EmployeeForm`
+- `EmployeeForm` (HR only operations)
 - `EmployeeCard`
 - `EmployeeTable`
-- `BulkImportDialog`
+- `BulkImportDialog` (HR only)
 - `ApprovalActions` (HR variant)
 
 ---

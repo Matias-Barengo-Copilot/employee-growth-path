@@ -37,6 +37,8 @@
 | Asignar/cambiar supervisor de un empleado | Si | No | No |
 | Asignar/cambiar equipo de un empleado | Si | No | No |
 
+**Nota:** El directorio es accesible por todos los roles (HR, Supervisor, Employee). Todos pueden ver la lista completa de empleados y buscar/filtrar. Sin embargo, solo HR puede realizar acciones administrativas como agregar, editar y desactivar empleados.
+
 ---
 
 ## 3. Employee Profile

@@ -2,7 +2,7 @@ import {
   FileText,
   List,
   CheckCircle,
-  UserPlus,
+  Users,
   BarChart3,
   LayoutDashboard,
   Target,
@@ -92,10 +92,10 @@ const baseNavigationItems: NavigationItem[] = [
     ],
   },
   {
-    label: "Members",
+    label: "Directory",
     href: "/employees",
-    icon: UserPlus,
-    roles: ["hr"],
+    icon: Users,
+    roles: ["employee", "supervisor", "hr"],
     exactMatch: false,
   },
 ];

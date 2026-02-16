@@ -75,19 +75,19 @@
 - `/leave-requests/[id]/confirmation` - Leave request confirmation page
   - Shows after successful submission
 
-#### Employee Management (HR Only)
-- `/employees` - Employee list and management
-  - **Accessible by**: HR only
+#### Employee Management (Directory)
+- `/employees` - Directory listing and employee management
+  - **Accessible by**: All roles (view only), HR has full admin functions
   - **Features**: 
     - List view with filters (role, country, search)
     - Pagination
-    - Create employee form (inline)
-    - Edit employee form (inline)
-    - Deactivate employee (soft delete)
+    - Create employee form (HR only, inline)
+    - Edit employee form (HR only, inline)
+    - Deactivate employee (HR only, soft delete)
     - **Note**: Filters and pagination are hidden when form is open
   
-- `/employees/create` - Create new employee (alternative route)
-- `/employees/[id]` - View/edit employee details
+- `/employees/create` - Create new employee (alternative route, HR only)
+- `/employees/[id]` - View employee details (all roles), edit employee (HR only)
 
 ---
 
@@ -206,10 +206,11 @@
 3. **Status Flow**:
    - `draft` → `pending` → `approved`/`rejected`/`cancelled`
 
-### Employee Management
-1. **HR Only**: Only HR role can create/edit/delete employees
-2. **Annual Vacation Days**: Required field, defaults to 0
-3. **Available Vacation Days**: Calculated based on annual days and used days
+### Directory
+1. **View Access**: All roles can view the employee directory listing
+2. **Admin Functions**: Only HR role can create/edit/delete employees
+3. **Annual Vacation Days**: Required field, defaults to 0
+4. **Available Vacation Days**: Calculated based on annual days and used days
 
 ---
 
