@@ -22,9 +22,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Target, Plus, Pencil, Trash2, Users, User } from 'lucide-react';
+import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
 import { useToast } from '@/lib/hooks/useToast';
 import { Pagination } from '@/components/shared/pagination/Pagination';
 import { usePagination } from '@/lib/hooks/usePagination';
@@ -148,6 +148,11 @@ export default function GoalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const { success, error } = useToast();
 
+  const scopeTabs: TabDefinition<Scope>[] = [
+    { key: 'my', label: 'My Goals', icon: User },
+    { key: 'team', label: 'Team Goals', icon: Users },
+  ];
+
   const handleCategoryChange = useCallback((cat: Category) => {
     setActiveCategory(cat);
     const params = new URLSearchParams(searchParams.toString());
@@ -160,8 +165,8 @@ export default function GoalsPage() {
     router.push(`?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
-  const handleScopeChange = useCallback((newScope: string) => {
-    setScope(newScope as Scope);
+  const handleScopeChange = useCallback((newScope: Scope) => {
+    setScope(newScope);
     const params = new URLSearchParams(searchParams.toString());
     params.delete('page');
     if (newScope === 'team') {
@@ -311,18 +316,12 @@ export default function GoalsPage() {
         </Button>
       </div>
 
-      <Tabs value={scope} onValueChange={handleScopeChange}>
-        <TabsList data-testid="tabs-scope">
-          <TabsTrigger value="my" data-testid="tab-my-goals">
-            <User className="size-4 mr-1.5" />
-            My Goals
-          </TabsTrigger>
-          <TabsTrigger value="team" data-testid="tab-team-goals">
-            <Users className="size-4 mr-1.5" />
-            Team Goals
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <TabBar
+        tabs={scopeTabs}
+        activeTab={scope}
+        onTabChange={handleScopeChange}
+        testIdPrefix="tab"
+      />
 
       <div className="flex flex-wrap items-center gap-2" data-testid="filter-category-bar">
         {CATEGORIES.map((cat) => (
