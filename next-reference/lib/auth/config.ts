@@ -32,7 +32,8 @@ export const authOptions: NextAuthOptions = {
       name: 'Test Account',
       credentials: { email: { label: 'Email', type: 'email' } },
             async authorize(credentials) {
-              if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('dummy') || !credentials?.email) return null;
+              const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+              if (!dbUrl || dbUrl.includes('dummy') || !credentials?.email) return null;
               try {
                 const [employee] = await db.select().from(employees).where(and(eq(employees.email, credentials.email), eq(employees.isActive, true))).limit(1);
                 return employee ? { id: employee.id, email: employee.email, name: employee.name } : null;
@@ -46,9 +47,9 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       // Skip database queries during build time
-      // During Next.js build, DATABASE_URL might not be available or might be a dummy value
-      if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('dummy')) {
-        return false; // Reject sign-in during build
+      const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+      if (!dbUrl || dbUrl.includes('dummy')) {
+        return false;
       }
 
       if (!user.email) {
@@ -90,9 +91,8 @@ export const authOptions: NextAuthOptions = {
       }
     },
     async session({ session }) {
-      // Skip database queries during build time
-      // During Next.js build, DATABASE_URL might not be available or might be a dummy value
-      if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('dummy')) {
+      const dbUrl2 = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+      if (!dbUrl2 || dbUrl2.includes('dummy')) {
         return session;
       }
 
