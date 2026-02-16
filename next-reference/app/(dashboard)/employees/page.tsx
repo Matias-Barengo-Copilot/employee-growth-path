@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { EmployeesList } from '@/components/shared/employees/EmployeesList';
-import { getEmployeesPaginated } from '@/lib/api/employees';
+import { getEmployeesPaginated, getEmployeeById } from '@/lib/api/employees';
 import { EmployeeListItem } from '@/lib/types/employee';
 import { usePagination } from '@/lib/hooks/usePagination';
 import { PaginationMetadata } from '@/lib/types';
@@ -25,9 +25,9 @@ export default function EmployeesPage() {
     const params = new URLSearchParams(searchParamsString);
     return params.get('role') || 'all';
   }, [searchParamsString]);
-  const searchFilter = useMemo(() => {
+  const selectedMemberId = useMemo(() => {
     const params = new URLSearchParams(searchParamsString);
-    return params.get('search') || '';
+    return params.get('memberId') || '';
   }, [searchParamsString]);
 
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
@@ -39,36 +39,46 @@ export default function EmployeesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getEmployeesPaginated({
-        role: roleFilter !== 'all' ? roleFilter : undefined,
-        search: searchFilter || undefined,
-        page,
-        limit,
-      });
-
-      if (response.success && response.data) {
-        setEmployees(response.data.data as EmployeeListItem[]);
-        setPagination(response.data.pagination);
+      if (selectedMemberId) {
+        const member = await getEmployeeById(selectedMemberId);
+        if (member) {
+          setEmployees([member as EmployeeListItem]);
+          setPagination({ total: 1, page: 1, limit: 1, totalPages: 1 });
+        } else {
+          setEmployees([]);
+          setPagination(null);
+        }
       } else {
-        setError(response.error?.message || 'Failed to fetch employees');
+        const response = await getEmployeesPaginated({
+          role: roleFilter !== 'all' ? roleFilter : undefined,
+          page,
+          limit,
+        });
+
+        if (response.success && response.data) {
+          setEmployees(response.data.data as EmployeeListItem[]);
+          setPagination(response.data.pagination);
+        } else {
+          setError(response.error?.message || 'Failed to fetch members');
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, roleFilter, searchFilter]);
+  }, [page, limit, roleFilter, selectedMemberId]);
 
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees]);
 
-  const handleSearchChange = useCallback((value: string) => {
+  const handleMemberSelect = useCallback((value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
-      params.set('search', value);
+      params.set('memberId', value);
     } else {
-      params.delete('search');
+      params.delete('memberId');
     }
     params.delete('page');
     router.push(`/employees?${params.toString()}`);
@@ -131,9 +141,9 @@ export default function EmployeesPage() {
       user={authenticatedUser}
       userRole={session?.user?.role}
       pagination={pagination}
-      searchQuery={searchFilter}
+      selectedMemberId={selectedMemberId}
       roleFilter={roleFilter}
-      onSearchChange={handleSearchChange}
+      onMemberSelect={handleMemberSelect}
       onRoleFilterChange={handleRoleFilterChange}
       onPageChange={handlePageChange}
       onItemsPerPageChange={handleItemsPerPageChange}

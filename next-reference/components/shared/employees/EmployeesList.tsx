@@ -6,8 +6,6 @@ import { EmployeeCard } from './EmployeeCard';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
 import { CreateEmployeeForm } from './CreateEmployeeForm';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -15,8 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { FilterAutocomplete } from '@/components/shared/filters/FilterAutocomplete';
 import { Pagination } from '@/components/shared/pagination/Pagination';
-import { UserPlus, Search, Filter, Loader2, Users, Edit2, Trash2 } from 'lucide-react';
+import { UserPlus, Filter, Loader2, Users, Edit2, Trash2 } from 'lucide-react';
 import { EmployeeListItem } from '@/lib/types/employee';
 import { AuthenticatedUser } from '@/lib/middleware/auth';
 import { deleteEmployee, getEmployeeById, type EmployeeDetail } from '@/lib/api/employees';
@@ -29,9 +28,9 @@ interface EmployeesListProps {
   user?: AuthenticatedUser | null;
   userRole?: string;
   pagination?: PaginationMetadata | null;
-  searchQuery: string;
+  selectedMemberId: string;
   roleFilter: string;
-  onSearchChange: (value: string) => void;
+  onMemberSelect: (value: string) => void;
   onRoleFilterChange: (value: string) => void;
   onPageChange?: (page: number) => void;
   onItemsPerPageChange?: (limit: number) => void;
@@ -51,9 +50,9 @@ export function EmployeesList({
   user,
   userRole,
   pagination,
-  searchQuery,
+  selectedMemberId,
   roleFilter,
-  onSearchChange,
+  onMemberSelect,
   onRoleFilterChange,
   onPageChange,
   onItemsPerPageChange,
@@ -184,14 +183,23 @@ export function EmployeesList({
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name or email..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9"
-              data-testid="input-directory-search"
+          <div className="flex-1">
+            <FilterAutocomplete
+              config={{
+                key: 'memberId',
+                type: 'autocomplete',
+                label: 'Member',
+                placeholder: 'Search member...',
+                fetchOptions: '/api/employees',
+                optionLabel: (item: { id: string; name?: string; email?: string; [key: string]: unknown }) => {
+                  const name = item.name ?? '';
+                  const email = item.email ?? '';
+                  return `${name} (${email})`;
+                },
+                optionValue: (item: { id: string; [key: string]: unknown }) => item.id,
+              }}
+              value={selectedMemberId}
+              onChange={onMemberSelect}
             />
           </div>
           <Select value={roleFilter} onValueChange={onRoleFilterChange}>
@@ -213,11 +221,11 @@ export function EmployeesList({
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-semibold text-lg mb-1">No team members found</h3>
             <p className="text-muted-foreground">
-              {searchQuery || roleFilter !== 'all'
-                ? 'Try adjusting your search or filter'
+              {selectedMemberId || roleFilter !== 'all'
+                ? 'Try adjusting your filters'
                 : 'Your team directory is empty'}
             </p>
-            {isHR && !searchQuery && roleFilter === 'all' && (
+            {isHR && !selectedMemberId && roleFilter === 'all' && (
               <Button onClick={() => setViewMode('create')} className="mt-4">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add First Member
