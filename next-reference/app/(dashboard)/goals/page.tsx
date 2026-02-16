@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Target, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/lib/hooks/useToast';
+import { Pagination } from '@/components/shared/pagination/Pagination';
+import type { PaginationMetadata } from '@/lib/types';
 
 interface Goal {
   id: string;
@@ -100,36 +103,66 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORIES: Category[] = ['all', 'growth', 'delivery', 'leadership', 'learning'];
 
 export default function GoalsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
+  const limit = parseInt(searchParams.get('limit') || '20', 10) || 20;
+
+  const categoryParam = searchParams.get('category') as Category | null;
+
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<Category>('all');
+  const [activeCategory, setActiveCategory] = useState<Category>(
+    categoryParam && ['growth', 'delivery', 'leadership', 'learning'].includes(categoryParam) ? categoryParam : 'all'
+  );
   const [createOpen, setCreateOpen] = useState(false);
   const [editGoal, setEditGoal] = useState<Goal | null>(null);
   const [formData, setFormData] = useState<GoalFormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const { success, error } = useToast();
 
+  const handlePageChange = useCallback((newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', newPage.toString());
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  const handleCategoryChange = useCallback((cat: Category) => {
+    setActiveCategory(cat);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('page');
+    if (cat !== 'all') {
+      params.set('category', cat);
+    } else {
+      params.delete('category');
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
   const fetchGoals = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/goals');
+      const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+      if (activeCategory !== 'all') {
+        params.set('category', activeCategory);
+      }
+      const res = await fetch(`/api/goals?${params.toString()}`);
       const json = await res.json();
-      if (json.success) {
-        setGoals(json.data);
+      if (json.success && json.data) {
+        setGoals(json.data.data);
+        setPagination(json.data.pagination);
       }
     } catch {
       error('Failed to load goals');
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, page, limit, activeCategory]);
 
   useEffect(() => {
     fetchGoals();
   }, [fetchGoals]);
-
-  const filteredGoals = activeCategory === 'all'
-    ? goals
-    : goals.filter((g) => g.category === activeCategory);
 
   function openCreate() {
     setFormData(EMPTY_FORM);
@@ -250,7 +283,7 @@ export default function GoalsPage() {
             key={cat}
             variant={activeCategory === cat ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setActiveCategory(cat)}
+            onClick={() => handleCategoryChange(cat)}
             data-testid={`button-filter-${cat}`}
           >
             {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
@@ -274,68 +307,76 @@ export default function GoalsPage() {
             </Card>
           ))}
         </div>
-      ) : filteredGoals.length === 0 ? (
+      ) : goals.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground" data-testid="text-empty-state">
           <Target className="size-10" />
           <p className="text-sm">No goals found. Create your first goal to get started.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredGoals.map((goal) => (
-            <Card
-              key={goal.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => openEdit(goal)}
-              data-testid={`card-goal-${goal.id}`}
-            >
-              <CardHeader>
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <CardTitle className="text-sm">{goal.title}</CardTitle>
-                  <Pencil className="size-3.5 text-muted-foreground shrink-0" />
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge
-                    variant="outline"
-                    className={CATEGORY_COLORS[goal.category]}
-                    data-testid={`badge-category-${goal.id}`}
-                  >
-                    {CATEGORY_LABELS[goal.category]}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={STATUS_COLORS[goal.status]}
-                    data-testid={`badge-status-${goal.id}`}
-                  >
-                    {STATUS_LABELS[goal.status]}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {goal.description && (
-                  <p className="mb-3 text-sm text-muted-foreground line-clamp-2" data-testid={`text-description-${goal.id}`}>
-                    {goal.description}
-                  </p>
-                )}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span>Progress</span>
-                    <span data-testid={`text-progress-${goal.id}`}>{goal.progress}%</span>
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {goals.map((goal) => (
+              <Card
+                key={goal.id}
+                className="cursor-pointer transition-shadow hover:shadow-md"
+                onClick={() => openEdit(goal)}
+                data-testid={`card-goal-${goal.id}`}
+              >
+                <CardHeader>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <CardTitle className="text-sm">{goal.title}</CardTitle>
+                    <Pencil className="size-3.5 text-muted-foreground shrink-0" />
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted" data-testid={`progress-bar-${goal.id}`}>
-                    <div
-                      className={`h-full rounded-full transition-all ${PROGRESS_BAR_COLORS[goal.status]}`}
-                      style={{ width: `${goal.progress}%` }}
-                    />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge
+                      variant="outline"
+                      className={CATEGORY_COLORS[goal.category]}
+                      data-testid={`badge-category-${goal.id}`}
+                    >
+                      {CATEGORY_LABELS[goal.category]}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={STATUS_COLORS[goal.status]}
+                      data-testid={`badge-status-${goal.id}`}
+                    >
+                      {STATUS_LABELS[goal.status]}
+                    </Badge>
                   </div>
-                </div>
-                {goal.dueDate && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Due: {new Date(goal.dueDate).toLocaleDateString()}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  {goal.description && (
+                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2" data-testid={`text-description-${goal.id}`}>
+                      {goal.description}
+                    </p>
+                  )}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>Progress</span>
+                      <span data-testid={`text-progress-${goal.id}`}>{goal.progress}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted" data-testid={`progress-bar-${goal.id}`}>
+                      <div
+                        className={`h-full rounded-full transition-all ${PROGRESS_BAR_COLORS[goal.status]}`}
+                        style={{ width: `${goal.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                  {goal.dueDate && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Due: {new Date(goal.dueDate).toLocaleDateString()}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {pagination && pagination.totalPages > 1 && (
+            <Pagination
+              pagination={pagination}
+              onPageChange={handlePageChange}
+            />
+          )}
         </div>
       )}
 

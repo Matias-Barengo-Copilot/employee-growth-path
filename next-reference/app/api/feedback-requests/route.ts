@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     const requesters = aliasedTable(employees, "requesters");
     const responders = aliasedTable(employees, "responders");
 
+    const status = searchParams.get('status');
+
     const conditions: SQL[] = [eq(feedbackRequests.companyId, user.companyId)];
 
     if (direction === 'to_me') {
@@ -36,6 +38,12 @@ export async function GET(request: NextRequest) {
           eq(feedbackRequests.responderId, user.employeeId)
         )!
       );
+    }
+
+    if (status === 'pending') {
+      conditions.push(eq(feedbackRequests.status, 'pending'));
+    } else if (status === 'completed') {
+      conditions.push(eq(feedbackRequests.status, 'completed'));
     }
 
     const whereClause = and(...conditions)!;

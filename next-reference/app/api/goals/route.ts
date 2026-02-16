@@ -23,11 +23,18 @@ export async function GET(request: NextRequest) {
     const user = await getAuthenticatedUser();
     const { searchParams } = new URL(request.url);
     const { page, limit } = parsePaginationParams(searchParams);
+    const category = searchParams.get('category');
 
-    const whereClause = and(
+    const conditions = [
       eq(goals.employeeId, user.employeeId),
-      eq(goals.companyId, user.companyId)
-    );
+      eq(goals.companyId, user.companyId),
+    ];
+
+    if (category && ['growth', 'delivery', 'leadership', 'learning'].includes(category)) {
+      conditions.push(eq(goals.category, category as 'growth' | 'delivery' | 'leadership' | 'learning'));
+    }
+
+    const whereClause = and(...conditions);
 
     const [totalResult] = await db
       .select({ count: count() })

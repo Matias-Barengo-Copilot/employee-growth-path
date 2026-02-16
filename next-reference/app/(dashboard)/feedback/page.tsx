@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,11 +24,13 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MessageSquare, Send, Plus, Clock, Check, Eye, EyeOff, ArrowUpRight, ArrowDownLeft, Inbox } from 'lucide-react';
+import { MessageSquare, Send, Plus, Clock, Check, EyeOff, ArrowUpRight, ArrowDownLeft, Inbox } from 'lucide-react';
 import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SkeletonCards } from '@/components/shared/SkeletonCards';
+import { Pagination } from '@/components/shared/pagination/Pagination';
 import { formatShortDate } from '@/lib/utils/date';
+import type { PaginationMetadata } from '@/lib/types';
 
 interface FeedbackItem {
   id: string;
@@ -78,10 +81,20 @@ type TabType = 'received' | 'given' | 'requests';
 export default function FeedbackPage() {
   const { data: session, status: sessionStatus } = useSession();
   const currentUserId = session?.user?.employeeId;
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<TabType>('received');
+  const tabParam = searchParams.get('tab') as TabType | null;
+  const activeTab: TabType = tabParam === 'given' || tabParam === 'requests' ? tabParam : 'received';
+  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
+  const limit = parseInt(searchParams.get('limit') || '20', 10) || 20;
+
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
-  const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
+  const [feedbackPagination, setFeedbackPagination] = useState<PaginationMetadata | null>(null);
+  const [requestsToMe, setRequestsToMe] = useState<FeedbackRequest[]>([]);
+  const [requestsToMePagination, setRequestsToMePagination] = useState<PaginationMetadata | null>(null);
+  const [myRequests, setMyRequests] = useState<FeedbackRequest[]>([]);
+  const [myRequestsPagination, setMyRequestsPagination] = useState<PaginationMetadata | null>(null);
   const [employees, setEmployees] = useState<EligibleEmployee[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const loading = dataLoading || sessionStatus === 'loading' || !currentUserId;
@@ -102,43 +115,70 @@ export default function FeedbackPage() {
   const [deadline, setDeadline] = useState('');
   const [submittingRequest, setSubmittingRequest] = useState(false);
 
-  const receivedFeedback = useMemo(() => {
-    if (!currentUserId) return [];
-    return feedbackItems.filter((item) => item.recipientId === currentUserId);
-  }, [feedbackItems, currentUserId]);
+  const tabs: TabDefinition<TabType>[] = [
+    { key: 'received', label: 'Received', count: activeTab === 'received' && feedbackPagination ? feedbackPagination.total : undefined },
+    { key: 'given', label: 'Given', count: activeTab === 'given' && feedbackPagination ? feedbackPagination.total : undefined },
+    { key: 'requests', label: 'Requests', count: activeTab === 'requests' && requestsToMePagination ? requestsToMePagination.total : undefined },
+  ];
 
-  const givenFeedback = useMemo(() => {
-    if (!currentUserId) return [];
-    return feedbackItems.filter((item) => item.senderId === currentUserId);
-  }, [feedbackItems, currentUserId]);
+  const updateParams = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
 
-  const myRequests = useMemo(() => {
-    if (!currentUserId) return [];
-    return feedbackRequests.filter((req) => req.requesterId === currentUserId);
-  }, [feedbackRequests, currentUserId]);
+  const handleTabChange = useCallback((tab: TabType) => {
+    updateParams({ tab, page: null });
+  }, [updateParams]);
 
-  const requestsToMe = useMemo(() => {
-    if (!currentUserId) return [];
-    return feedbackRequests.filter((req) => req.responderId === currentUserId);
-  }, [feedbackRequests, currentUserId]);
+  const handlePageChange = useCallback((newPage: number) => {
+    updateParams({ page: newPage.toString() });
+  }, [updateParams]);
 
   const fetchFeedback = useCallback(async () => {
+    setDataLoading(true);
     try {
-      const res = await fetch('/api/feedback');
+      const direction = activeTab === 'received' ? 'received' : 'given';
+      const params = new URLSearchParams({ direction, page: page.toString(), limit: limit.toString() });
+      const res = await fetch(`/api/feedback?${params.toString()}`);
       const json = await res.json();
-      if (json.success) setFeedbackItems(json.data);
+      if (json.success && json.data) {
+        setFeedbackItems(json.data.data);
+        setFeedbackPagination(json.data.pagination);
+      }
     } catch {
-      // silently fail
+    } finally {
+      setDataLoading(false);
     }
-  }, []);
+  }, [activeTab, page, limit]);
 
   const fetchRequests = useCallback(async () => {
+    setDataLoading(true);
     try {
-      const res = await fetch('/api/feedback-requests');
-      const json = await res.json();
-      if (json.success) setFeedbackRequests(json.data);
+      const toMeParams = new URLSearchParams({ direction: 'to_me', page: '1', limit: '50' });
+      const fromMeParams = new URLSearchParams({ direction: 'from_me', page: '1', limit: '50' });
+      const [toMeRes, fromMeRes] = await Promise.all([
+        fetch(`/api/feedback-requests?${toMeParams.toString()}`),
+        fetch(`/api/feedback-requests?${fromMeParams.toString()}`),
+      ]);
+      const [toMeJson, fromMeJson] = await Promise.all([toMeRes.json(), fromMeRes.json()]);
+      if (toMeJson.success && toMeJson.data) {
+        setRequestsToMe(toMeJson.data.data);
+        setRequestsToMePagination(toMeJson.data.pagination);
+      }
+      if (fromMeJson.success && fromMeJson.data) {
+        setMyRequests(fromMeJson.data.data);
+        setMyRequestsPagination(fromMeJson.data.pagination);
+      }
     } catch {
-      // silently fail
+    } finally {
+      setDataLoading(false);
     }
   }, []);
 
@@ -148,15 +188,21 @@ export default function FeedbackPage() {
       const json = await res.json();
       if (json.success) setEmployees(json.data);
     } catch {
-      // silently fail
     }
   }, []);
 
   useEffect(() => {
-    Promise.all([fetchFeedback(), fetchRequests(), fetchEmployees()]).finally(() =>
-      setDataLoading(false)
-    );
-  }, [fetchFeedback, fetchRequests, fetchEmployees]);
+    fetchEmployees();
+  }, [fetchEmployees]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (activeTab === 'requests') {
+      fetchRequests();
+    } else {
+      fetchFeedback();
+    }
+  }, [activeTab, currentUserId, fetchFeedback, fetchRequests]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -169,7 +215,6 @@ export default function FeedbackPage() {
         prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
       );
     } catch {
-      // silently fail
     }
   };
 
@@ -214,11 +259,13 @@ export default function FeedbackPage() {
       if (json.success) {
         resetGiveFeedbackForm();
         setGiveFeedbackOpen(false);
-        fetchFeedback();
-        fetchRequests();
+        if (activeTab === 'requests') {
+          fetchRequests();
+        } else {
+          fetchFeedback();
+        }
       }
     } catch {
-      // silently fail
     } finally {
       setSubmittingFeedback(false);
     }
@@ -244,7 +291,6 @@ export default function FeedbackPage() {
         fetchRequests();
       }
     } catch {
-      // silently fail
     } finally {
       setSubmittingRequest(false);
     }
@@ -256,12 +302,6 @@ export default function FeedbackPage() {
     setRespondingToRequestId(request.id);
     setGiveFeedbackOpen(true);
   };
-
-  const tabs: TabDefinition<TabType>[] = [
-    { key: 'received', label: 'Received', count: receivedFeedback.filter((f) => !f.isRead).length },
-    { key: 'given', label: 'Given' },
-    { key: 'requests', label: 'Requests', count: requestsToMe.filter((r) => r.status === 'pending').length },
-  ];
 
   const renderFeedbackContent = (item: FeedbackItem) => (
     <CardContent className="flex flex-col gap-4">
@@ -332,12 +372,12 @@ export default function FeedbackPage() {
         </div>
       </div>
 
-      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {loading ? (
         <SkeletonCards />
       ) : activeTab === 'received' ? (
-        receivedFeedback.length === 0 ? (
+        feedbackItems.length === 0 ? (
           <EmptyState
             icon={Inbox}
             message="No feedback received yet. Ask a colleague for feedback to get started."
@@ -345,7 +385,7 @@ export default function FeedbackPage() {
           />
         ) : (
           <div className="flex flex-col gap-4">
-            {receivedFeedback.map((item) => (
+            {feedbackItems.map((item) => (
               <Card
                 key={item.id}
                 className="relative"
@@ -380,10 +420,16 @@ export default function FeedbackPage() {
                 {renderFeedbackContent(item)}
               </Card>
             ))}
+            {feedbackPagination && feedbackPagination.totalPages > 1 && (
+              <Pagination
+                pagination={feedbackPagination}
+                onPageChange={handlePageChange}
+              />
+            )}
           </div>
         )
       ) : activeTab === 'given' ? (
-        givenFeedback.length === 0 ? (
+        feedbackItems.length === 0 ? (
           <EmptyState
             icon={Send}
             message="You haven't given any feedback yet. Share constructive feedback with your colleagues."
@@ -391,7 +437,7 @@ export default function FeedbackPage() {
           />
         ) : (
           <div className="flex flex-col gap-4">
-            {givenFeedback.map((item) => (
+            {feedbackItems.map((item) => (
               <Card
                 key={item.id}
                 data-testid={`card-feedback-given-${item.id}`}
@@ -417,6 +463,12 @@ export default function FeedbackPage() {
                 {renderFeedbackContent(item)}
               </Card>
             ))}
+            {feedbackPagination && feedbackPagination.totalPages > 1 && (
+              <Pagination
+                pagination={feedbackPagination}
+                onPageChange={handlePageChange}
+              />
+            )}
           </div>
         )
       ) : (

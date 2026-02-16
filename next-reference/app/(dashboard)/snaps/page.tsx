@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,9 @@ import { Zap, Send, ArrowUpRight, ArrowDownLeft, Plus } from 'lucide-react';
 import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SkeletonCards } from '@/components/shared/SkeletonCards';
+import { Pagination } from '@/components/shared/pagination/Pagination';
 import { getRelativeTime } from '@/lib/utils/date';
+import type { PaginationMetadata } from '@/lib/types';
 
 interface Snap {
   id: string;
@@ -58,9 +61,16 @@ type SnapTab = 'received' | 'sent';
 export default function SnapsPage() {
   const { data: session, status: sessionStatus } = useSession();
   const currentUserId = session?.user?.employeeId;
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<SnapTab>('received');
+  const tabParam = (searchParams.get('tab') as SnapTab) || 'received';
+  const activeTab = tabParam === 'sent' ? 'sent' : 'received';
+  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
+  const limit = parseInt(searchParams.get('limit') || '20', 10) || 20;
+
   const [snaps, setSnaps] = useState<Snap[]>([]);
+  const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
   const [employees, setEmployees] = useState<EligibleEmployee[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const loading = dataLoading || sessionStatus === 'loading' || !currentUserId;
@@ -71,30 +81,47 @@ export default function SnapsPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const receivedSnaps = useMemo(() => {
-    if (!currentUserId) return [];
-    return snaps.filter((snap) => snap.recipientId === currentUserId);
-  }, [snaps, currentUserId]);
-
-  const sentSnaps = useMemo(() => {
-    if (!currentUserId) return [];
-    return snaps.filter((snap) => snap.senderId === currentUserId);
-  }, [snaps, currentUserId]);
-
   const tabs: TabDefinition<SnapTab>[] = [
-    { key: 'received', label: 'Received', count: receivedSnaps.length },
-    { key: 'sent', label: 'Sent', count: sentSnaps.length },
+    { key: 'received', label: 'Received', count: pagination && activeTab === 'received' ? pagination.total : undefined },
+    { key: 'sent', label: 'Sent', count: pagination && activeTab === 'sent' ? pagination.total : undefined },
   ];
 
+  const updateParams = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  const handleTabChange = useCallback((tab: SnapTab) => {
+    updateParams({ tab, page: null });
+  }, [updateParams]);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    updateParams({ page: newPage.toString() });
+  }, [updateParams]);
+
   const fetchSnaps = useCallback(async () => {
+    setDataLoading(true);
     try {
-      const res = await fetch('/api/snaps');
+      const direction = activeTab === 'received' ? 'received' : 'sent';
+      const params = new URLSearchParams({ direction, page: page.toString(), limit: limit.toString() });
+      const res = await fetch(`/api/snaps?${params.toString()}`);
       const json = await res.json();
-      if (json.success) setSnaps(json.data);
+      if (json.success && json.data) {
+        setSnaps(json.data.data);
+        setPagination(json.data.pagination);
+      }
     } catch {
-      // silently fail
+    } finally {
+      setDataLoading(false);
     }
-  }, []);
+  }, [activeTab, page, limit]);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -102,15 +129,18 @@ export default function SnapsPage() {
       const json = await res.json();
       if (json.success) setEmployees(json.data);
     } catch {
-      // silently fail
     }
   }, []);
 
   useEffect(() => {
-    Promise.all([fetchSnaps(), fetchEmployees()]).finally(() =>
-      setDataLoading(false)
-    );
-  }, [fetchSnaps, fetchEmployees]);
+    fetchEmployees();
+  }, [fetchEmployees]);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchSnaps();
+    }
+  }, [fetchSnaps, currentUserId]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -144,13 +174,10 @@ export default function SnapsPage() {
         fetchSnaps();
       }
     } catch {
-      // silently fail
     } finally {
       setSubmitting(false);
     }
   };
-
-  const activeSnaps = activeTab === 'received' ? receivedSnaps : sentSnaps;
 
   const renderSnapCard = (snap: Snap) => {
     const isReceived = activeTab === 'received';
@@ -291,11 +318,11 @@ export default function SnapsPage() {
         </Dialog>
       </div>
 
-      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {loading ? (
         <SkeletonCards />
-      ) : activeSnaps.length === 0 ? (
+      ) : snaps.length === 0 ? (
         <EmptyState
           icon={activeTab === 'received' ? Zap : Send}
           message={
@@ -307,7 +334,13 @@ export default function SnapsPage() {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          {activeSnaps.map(renderSnapCard)}
+          {snaps.map(renderSnapCard)}
+          {pagination && pagination.totalPages > 1 && (
+            <Pagination
+              pagination={pagination}
+              onPageChange={handlePageChange}
+            />
+          )}
         </div>
       )}
     </div>
