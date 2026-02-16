@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { eq, desc, aliasedTable } from "drizzle-orm";
+import { eq, desc, aliasedTable, and, or, count, SQL } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/middleware/auth";
 import { db } from "@/db/client";
 import { snaps, employees, activities } from "@/db/schema";
 import { successResponse, errorResponse } from "@/lib/utils/response";
+import { parsePaginationParams, buildPaginationMeta, paginationOffset } from "@/lib/utils/pagination";
 
 const createSnapSchema = z.object({
   recipientId: z.string().uuid(),
@@ -15,9 +16,37 @@ const createSnapSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
+    const { searchParams } = new URL(request.url);
+    const { page, limit } = parsePaginationParams(searchParams);
+    const direction = searchParams.get('direction');
 
     const senders = aliasedTable(employees, "senders");
     const recipients = aliasedTable(employees, "recipients");
+
+    const conditions: SQL[] = [eq(snaps.companyId, user.companyId)];
+
+    if (direction === 'received') {
+      conditions.push(eq(snaps.recipientId, user.employeeId));
+    } else if (direction === 'sent') {
+      conditions.push(eq(snaps.senderId, user.employeeId));
+    } else {
+      conditions.push(
+        or(
+          eq(snaps.senderId, user.employeeId),
+          eq(snaps.recipientId, user.employeeId)
+        )!
+      );
+    }
+
+    const whereClause = and(...conditions)!;
+
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(snaps)
+      .where(whereClause);
+
+    const total = totalResult?.count ?? 0;
+    const pagination = buildPaginationMeta(total, page, limit);
 
     const result = await db
       .select({
@@ -34,10 +63,12 @@ export async function GET(request: NextRequest) {
       .from(snaps)
       .innerJoin(senders, eq(snaps.senderId, senders.id))
       .innerJoin(recipients, eq(snaps.recipientId, recipients.id))
-      .where(eq(snaps.companyId, user.companyId))
-      .orderBy(desc(snaps.createdAt));
+      .where(whereClause)
+      .orderBy(desc(snaps.createdAt))
+      .limit(limit)
+      .offset(paginationOffset(pagination.page, limit));
 
-    return successResponse(result);
+    return successResponse({ data: result, pagination });
   } catch (error) {
     return errorResponse(error);
   }

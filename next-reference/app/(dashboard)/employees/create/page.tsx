@@ -21,10 +21,10 @@ export default async function CreateEmployeePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Create New Employee
+          Create New Member
         </h1>
         <p className="text-muted-foreground mt-2">
-          Create a new employee account and send invitation email. The employee will receive an email to set their password.
+          Create a new member account and send an invitation email. The member will receive an email to set their password.
         </p>
       </div>
 

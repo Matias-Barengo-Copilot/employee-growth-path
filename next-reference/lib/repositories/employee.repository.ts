@@ -58,6 +58,16 @@ export class EmployeeRepository {
         roleType: employees.roleType,
         joiningDate: employees.joiningDate,
         birthday: employees.birthday,
+        title: employees.title,
+        location: employees.location,
+        timezone: employees.timezone,
+        slackHandle: employees.slackHandle,
+        whatIDo: employees.whatIDo,
+        workingPreferences: employees.workingPreferences,
+        currentlyWorkingOn: employees.currentlyWorkingOn,
+        strengths: employees.strengths,
+        funFacts: employees.funFacts,
+        profileImageUrl: employees.profileImageUrl,
         usedVacationDays: employees.usedVacationDays,
         lastVacationResetDate: employees.lastVacationResetDate,
         isActive: employees.isActive,
@@ -302,17 +312,7 @@ export class EmployeeRepository {
     }
 
     // Build update object with only provided fields
-    const updateData: Partial<{
-      name: string;
-      email: string;
-      country: string;
-      role: EmployeeRole;
-      roleType: 'employee' | 'individual_contractor';
-      joiningDate: string | null;
-      birthday: string | null;
-      usedVacationDays: number;
-      updatedAt: Date;
-    }> = {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
     };
 
@@ -323,6 +323,16 @@ export class EmployeeRepository {
     if (data.roleType !== undefined) updateData.roleType = data.roleType;
     if (data.joiningDate !== undefined) updateData.joiningDate = data.joiningDate || null;
     if (data.birthday !== undefined) updateData.birthday = data.birthday || null;
+    if (data.title !== undefined) updateData.title = data.title || null;
+    if (data.location !== undefined) updateData.location = data.location || null;
+    if (data.timezone !== undefined) updateData.timezone = data.timezone || null;
+    if (data.slackHandle !== undefined) updateData.slackHandle = data.slackHandle || null;
+    if (data.whatIDo !== undefined) updateData.whatIDo = data.whatIDo || null;
+    if (data.workingPreferences !== undefined) updateData.workingPreferences = data.workingPreferences || null;
+    if (data.currentlyWorkingOn !== undefined) updateData.currentlyWorkingOn = data.currentlyWorkingOn || null;
+    if (data.strengths !== undefined) updateData.strengths = data.strengths || null;
+    if (data.funFacts !== undefined) updateData.funFacts = data.funFacts || null;
+    if (data.profileImageUrl !== undefined) updateData.profileImageUrl = data.profileImageUrl || null;
     
 
     const [updated] = await db

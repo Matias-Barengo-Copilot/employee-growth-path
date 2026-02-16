@@ -10,7 +10,7 @@
 - **UI**: React 19, Tailwind CSS, shadcn/ui components
 - **Database**: PostgreSQL (via Neon DB)
 - **ORM**: Drizzle ORM
-- **Authentication**: NextAuth.js (Google OAuth + Credentials provider for test mode)
+- **Authentication**: NextAuth.js (Google OAuth)
 - **Form Management**: React Hook Form + Zod validation
 - **Notifications**: Email (Resend) + Slack integration
 
@@ -38,7 +38,6 @@
 - View all leave requests in the organization (`/requests/all-requests`)
 - Approve/reject any leave request
 - Create and manage employees (`/employees`)
-- Access settings (`/settings`, `/settings/slack`)
 - **Cannot**: Submit leave requests (restricted from sidebar), view "My Requests" tab
 
 ---
@@ -46,7 +45,7 @@
 ## Application Routes
 
 ### Public Routes
-- `/sign-in` - Sign in page (Google OAuth or test credentials)
+- `/sign-in` - Sign in page (Google OAuth)
 - `/sign-up` - Sign up page (if applicable)
 
 ### Dashboard Routes (Protected - Require Authentication)
@@ -76,27 +75,19 @@
 - `/leave-requests/[id]/confirmation` - Leave request confirmation page
   - Shows after successful submission
 
-#### Employee Management (HR Only)
-- `/employees` - Employee list and management
-  - **Accessible by**: HR only
+#### Employee Management (Directory)
+- `/employees` - Directory listing and employee management
+  - **Accessible by**: All roles (view only), HR has full admin functions
   - **Features**: 
     - List view with filters (role, country, search)
     - Pagination
-    - Create employee form (inline)
-    - Edit employee form (inline)
-    - Deactivate employee (soft delete)
+    - Create employee form (HR only, inline)
+    - Edit employee form (HR only, inline)
+    - Deactivate employee (HR only, soft delete)
     - **Note**: Filters and pagination are hidden when form is open
   
-- `/employees/create` - Create new employee (alternative route)
-- `/employees/[id]` - View/edit employee details
-
-#### Settings (HR Only)
-- `/settings` - General settings page
-- `/settings/slack` - Slack integration settings
-
-#### Test Mode (HR Only, when enabled)
-- `/test-users` - Test user management page
-  - Only visible when test mode is enabled (checked via `isTestModeEnabledServer()` from `lib/utils/test-mode.ts` for server-side checks)
+- `/employees/create` - Create new employee (alternative route, HR only)
+- `/employees/[id]` - View employee details (all roles), edit employee (HR only)
 
 ---
 
@@ -171,9 +162,6 @@
 
 ### Sign In
 - **Primary**: Google OAuth
-- **Test Mode**: Credentials provider (email/password)
-  - Enabled when test mode is enabled (checked via `isTestModeEnabledServer()` for server-side)
-  - Test users can be created via `/test-users` page
 
 ### Session Management
 - Uses NextAuth.js
@@ -218,10 +206,11 @@
 3. **Status Flow**:
    - `draft` → `pending` → `approved`/`rejected`/`cancelled`
 
-### Employee Management
-1. **HR Only**: Only HR role can create/edit/delete employees
-2. **Annual Vacation Days**: Required field, defaults to 0
-3. **Available Vacation Days**: Calculated based on annual days and used days
+### Directory
+1. **View Access**: All roles can view the employee directory listing
+2. **Admin Functions**: Only HR role can create/edit/delete employees
+3. **Annual Vacation Days**: Required field, defaults to 0
+4. **Available Vacation Days**: Calculated based on annual days and used days
 
 ---
 
@@ -249,12 +238,6 @@
 ---
 
 ## Test Data & Environment
-
-### Test Mode
-- Enabled via `ENABLE_TEST_MODE=true` or `NEXT_PUBLIC_ENABLE_TEST_MODE=true`
-- Checked using centralized utility functions from `lib/utils/test-mode.ts`
-- Allows credential-based authentication
-- Test users can be created via `/test-users` page
 
 ### Sample Data Structure
 ```typescript
@@ -327,7 +310,6 @@
 4. Edit employee
 5. View "All Requests"
 6. Approve/reject requests
-7. Access Settings
 
 ---
 
@@ -363,8 +345,6 @@ Key environment variables for testing:
 - `NEXTAUTH_SECRET` - Secret for NextAuth
 - `GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
-- `ENABLE_TEST_MODE` - Enable test mode authentication
-- `NEXT_PUBLIC_ENABLE_TEST_MODE` - Public flag for test mode
 - `RESEND_API_KEY` - Email service API key
 - `BOT_USER_OAUTH_TOKEN` - Slack bot token
 - `SLACK_CHANNEL` - Slack channel ID
@@ -389,7 +369,7 @@ Key environment variables for testing:
 
 ## Notes for Playwright Tests
 
-1. **Authentication**: Use test mode credentials or mock NextAuth session
+1. **Authentication**: Mock NextAuth session
 2. **Role-based Testing**: Test each role's specific permissions
 3. **Form Interactions**: Use React Hook Form patterns (field names, validation)
 4. **Date Selection**: Calendar component requires clicking dates, then selecting leave type

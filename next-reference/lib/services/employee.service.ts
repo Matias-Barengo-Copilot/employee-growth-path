@@ -27,17 +27,11 @@ export class EmployeeService {
       return null;
     }
 
-    // HR can see all employees
-    // Others can only see themselves
-    if (user.role === "hr") {
-      return employee;
+    if (employee.companyId !== user.companyId) {
+      throw new ForbiddenError("Access denied");
     }
 
-    if (employee.id === user.employeeId) {
-      return employee;
-    }
-
-    throw new ForbiddenError("Access denied");
+    return employee;
   }
 
   async getEmployees(
@@ -48,27 +42,8 @@ export class EmployeeService {
   ): Promise<PaginatedResponse<EmployeeListItem>> {
     let effectiveFilters: { companyId?: string; roles?: string[]; search?: string };
 
-    // Apply role-based access control
-    if (user.role === "hr") {
-      // HR can see all employees, optionally filtered
-      const companyId = filters?.companyId || user.companyId;
-      effectiveFilters = { companyId, roles: filters?.roles, search: filters?.search };
-    } else {
-      // Others can only see themselves (ignore filters and pagination)
-      const employee = await this.employeeRepository.findById(user.employeeId);
-      const singleEmployee = employee ? [employee] : [];
-      return {
-        data: singleEmployee,
-        pagination: {
-          page: 1,
-          limit: singleEmployee.length,
-          total: singleEmployee.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false,
-        },
-      };
-    }
+    const companyId = filters?.companyId || user.companyId;
+    effectiveFilters = { companyId, roles: filters?.roles, search: filters?.search };
 
     const data = await this.employeeRepository.findByFilters(effectiveFilters, page, limit);
     const total = await this.employeeRepository.countByFilters(effectiveFilters);
@@ -90,13 +65,18 @@ export class EmployeeService {
   }
 
   async updateEmployee(id: string, data: UpdateEmployeeInput, user: AuthenticatedUser) {
-    if (user.role !== "hr") {
-      throw new ForbiddenError("Only HR can update employees");
+    if (user.role !== "hr" && user.employeeId !== id) {
+      throw new ForbiddenError("Only HR or the profile owner can update employees");
     }
 
     const employee = await this.employeeRepository.findById(id);
     if (!employee) {
       throw new Error("Employee not found");
+    }
+
+    if (user.employeeId === id && user.role !== "hr") {
+      const { name, email, country, role, roleType, joiningDate, birthday, ...profileFields } = data;
+      return this.employeeRepository.update(id, profileFields);
     }
 
     return this.employeeRepository.update(id, data);

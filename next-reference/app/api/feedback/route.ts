@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { eq, and, or, desc, aliasedTable } from "drizzle-orm";
+import { eq, and, or, desc, aliasedTable, count, SQL } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/middleware/auth";
 import { db } from "@/db/client";
 import { feedback, feedbackRequests, employees, activities } from "@/db/schema";
 import { successResponse, errorResponse } from "@/lib/utils/response";
+import { parsePaginationParams, buildPaginationMeta, paginationOffset } from "@/lib/utils/pagination";
 
 const createFeedbackSchema = z.object({
   recipientId: z.string().uuid(),
@@ -18,9 +19,37 @@ const createFeedbackSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
+    const { searchParams } = new URL(request.url);
+    const { page, limit } = parsePaginationParams(searchParams);
+    const direction = searchParams.get('direction');
 
     const senders = aliasedTable(employees, "senders");
     const recipients = aliasedTable(employees, "recipients");
+
+    const conditions: SQL[] = [eq(feedback.companyId, user.companyId)];
+
+    if (direction === 'received') {
+      conditions.push(eq(feedback.recipientId, user.employeeId));
+    } else if (direction === 'given') {
+      conditions.push(eq(feedback.senderId, user.employeeId));
+    } else {
+      conditions.push(
+        or(
+          eq(feedback.senderId, user.employeeId),
+          eq(feedback.recipientId, user.employeeId)
+        )!
+      );
+    }
+
+    const whereClause = and(...conditions)!;
+
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(feedback)
+      .where(whereClause);
+
+    const total = totalResult?.count ?? 0;
+    const pagination = buildPaginationMeta(total, page, limit);
 
     const rows = await db
       .select({
@@ -41,16 +70,10 @@ export async function GET(request: NextRequest) {
       .from(feedback)
       .innerJoin(senders, eq(feedback.senderId, senders.id))
       .innerJoin(recipients, eq(feedback.recipientId, recipients.id))
-      .where(
-        and(
-          eq(feedback.companyId, user.companyId),
-          or(
-            eq(feedback.senderId, user.employeeId),
-            eq(feedback.recipientId, user.employeeId)
-          )
-        )
-      )
-      .orderBy(desc(feedback.createdAt));
+      .where(whereClause)
+      .orderBy(desc(feedback.createdAt))
+      .limit(limit)
+      .offset(paginationOffset(pagination.page, limit));
 
     const result = rows.map((row) => {
       if (row.isAnonymous && row.recipientId === user.employeeId && row.senderId !== user.employeeId) {
@@ -63,7 +86,7 @@ export async function GET(request: NextRequest) {
       return row;
     });
 
-    return successResponse(result);
+    return successResponse({ data: result, pagination });
   } catch (error) {
     return errorResponse(error);
   }

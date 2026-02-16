@@ -107,7 +107,7 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
         });
 
         if (response.success) {
-          toast.success('Success', 'Employee updated successfully!');
+          toast.success('Success', 'Member updated successfully!');
           onSuccess?.();
         }
       } else {
@@ -124,12 +124,12 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
         });
 
         if (response.success) {
-          toast.success('Success', 'Employee created and invitation sent successfully!');
+          toast.success('Success', 'Member created and invitation sent successfully!');
           onSuccess?.();
         }
       }
     } catch (error) {
-      toast.error('Error', error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} employee`);
+      toast.error('Error', error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} member`);
     } finally {
       setIsSubmitting(false);
     }
@@ -140,11 +140,11 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>{isEditMode ? 'Edit Employee' : 'Employee Information'}</CardTitle>
+            <CardTitle>{isEditMode ? 'Edit Member' : 'Member Information'}</CardTitle>
             <CardDescription>
               {isEditMode 
-                ? 'Update employee information below.'
-                : 'Fill in all required information for the new employee. An invitation email will be sent automatically.'}
+                ? 'Update member information below.'
+                : 'Fill in all required information for the new member. An invitation email will be sent automatically.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -206,13 +206,13 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="employee">Member</SelectItem>
                       <SelectItem value="supervisor">Supervisor</SelectItem>
                       <SelectItem value="hr">HR / Admin</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Select the functional role for this employee. This determines their permissions and access level.
+                    Select the functional role for this member. This determines their permissions and access level.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -234,7 +234,7 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="employee">Member</SelectItem>
                         <SelectItem value="individual_contractor">Individual Contractor</SelectItem>
                       </SelectContent>
                     </Select>
@@ -258,7 +258,7 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
                       <Input type="date" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Date when employee joined the company
+                      Date when member joined the company
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -275,7 +275,7 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
                       <Input type="date" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Employee's birthday for celebrations
+                      Member's birthday for celebrations
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -302,7 +302,7 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
                 {isEditMode ? 'Updating...' : 'Creating...'}
               </>
             ) : (
-              isEditMode ? 'Update Employee' : 'Create Employee & Send Invitation'
+              isEditMode ? 'Update Member' : 'Create Member & Send Invitation'
             )}
           </Button>
         </div>

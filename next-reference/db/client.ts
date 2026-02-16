@@ -12,7 +12,7 @@ function getDb(): DbType {
     return dbInstance;
   }
 
-  const connectionString = process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy';
+  const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy';
   
   if (!poolInstance) {
     poolInstance = new Pool({

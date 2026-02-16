@@ -29,9 +29,9 @@ export function DeleteEmployeeModal({
     <Dialog open={open} onOpenChange={onCancel}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Deactivate Employee</DialogTitle>
+          <DialogTitle>Deactivate Member</DialogTitle>
           <DialogDescription>
-            Are you sure you want to deactivate <strong>{employeeName}</strong>? The employee will no longer be able to sign in or appear in employee lists, but their historical data (leave requests, approvals) will be preserved.
+            Are you sure you want to deactivate <strong>{employeeName}</strong>? This member will no longer be able to sign in or appear in the directory, but their historical data (leave requests, approvals) will be preserved.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

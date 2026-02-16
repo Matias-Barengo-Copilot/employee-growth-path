@@ -10,13 +10,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bell, User, Settings, LogOut } from 'lucide-react';
+import { Bell, User, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
-  /** User's full name */
   userName: string;
-  /** User's email address */
   userEmail: string;
+  employeeId?: string;
 }
 
 /**
@@ -26,7 +26,7 @@ interface HeaderProps {
  * Features:
  * - User avatar (from Clerk)
  * - User name and role display
- * - Dropdown menu with Profile, Settings, and Logout
+ * - Dropdown menu with Profile and Logout
  * - Notifications icon (placeholder for future)
  * - Mobile-responsive design
  * 
@@ -38,7 +38,8 @@ interface HeaderProps {
  * />
  * ```
  */
-export function Header({ userName, userEmail }: HeaderProps) {
+export function Header({ userName, userEmail, employeeId }: HeaderProps) {
+  const router = useRouter();
   /**
    * Get user initials from name for avatar fallback
    * @param name - Full name of the user
@@ -99,13 +100,13 @@ export function Header({ userName, userEmail }: HeaderProps) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem
+            onClick={() => employeeId && router.push(`/employees/${employeeId}`)}
+            disabled={!employeeId}
+            data-testid="menu-item-profile"
+          >
             <User className="mr-2 h-4 w-4" />
             <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut}>

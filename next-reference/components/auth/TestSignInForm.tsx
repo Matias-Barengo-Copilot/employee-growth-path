@@ -14,11 +14,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-/**
- * TEST MODE: Sign-in form for test users
- * Allows direct sign-in with email (no Google OAuth required)
- * Only shown when test mode is enabled (via lib/utils/test-mode.ts)
- */
 export function TestSignInForm() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -68,6 +63,7 @@ export function TestSignInForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
+              data-testid="input-test-email"
             />
             <div className="mt-2 space-y-1">
               <p className="text-xs text-muted-foreground font-medium">Test Accounts:</p>
@@ -87,6 +83,7 @@ export function TestSignInForm() {
                     disabled={isLoading}
                     className="text-xs px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title={`Click to use ${testEmail}`}
+                    data-testid={`button-test-account-${testEmail.split('@')[0]}`}
                   >
                     {label}
                   </button>
@@ -95,9 +92,9 @@ export function TestSignInForm() {
             </div>
           </div>
           {error && (
-            <div className="text-sm text-red-600">{error}</div>
+            <div className="text-sm text-red-600" data-testid="text-test-signin-error">{error}</div>
           )}
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-test-signin">
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -112,4 +109,3 @@ export function TestSignInForm() {
     </Card>
   );
 }
-

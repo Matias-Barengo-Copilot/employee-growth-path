@@ -40,6 +40,7 @@ export function DashboardLayout({ children, user, canViewAllLeaveRequests = fals
           <Header
             userName={user.name}
             userEmail={user.email}
+            employeeId={user.employeeId}
           />
 
           {/* Page content */}

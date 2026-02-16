@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -21,7 +24,14 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MessageSquare, Send, Plus, Clock, Check } from 'lucide-react';
+import { MessageSquare, Send, Plus, Clock, Check, EyeOff, ArrowUpRight, ArrowDownLeft, Inbox } from 'lucide-react';
+import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { SkeletonCards } from '@/components/shared/SkeletonCards';
+import { Pagination } from '@/components/shared/pagination/Pagination';
+import { usePagination } from '@/lib/hooks/usePagination';
+import { formatShortDate } from '@/lib/utils/date';
+import type { PaginationMetadata } from '@/lib/types';
 
 interface FeedbackItem {
   id: string;
@@ -67,20 +77,30 @@ const FEEDBACK_TAGS = [
   'Reliability',
 ];
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+type TabType = 'received' | 'given' | 'requests';
 
 export default function FeedbackPage() {
-  const [activeTab, setActiveTab] = useState<'received' | 'requests'>('received');
+  const { data: session, status: sessionStatus } = useSession();
+  const currentUserId = session?.user?.employeeId;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const tabParam = searchParams.get('tab') as TabType | null;
+  const activeTab: TabType = tabParam === 'given' || tabParam === 'requests' ? tabParam : 'received';
+  const { page, limit, handlePageChange, handleItemsPerPageChange } = usePagination({
+    defaultPage: 1,
+    defaultLimit: 20,
+  });
+
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
-  const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
+  const [feedbackPagination, setFeedbackPagination] = useState<PaginationMetadata | null>(null);
+  const [requestsToMe, setRequestsToMe] = useState<FeedbackRequest[]>([]);
+  const [requestsToMePagination, setRequestsToMePagination] = useState<PaginationMetadata | null>(null);
+  const [myRequests, setMyRequests] = useState<FeedbackRequest[]>([]);
+  const [myRequestsPagination, setMyRequestsPagination] = useState<PaginationMetadata | null>(null);
   const [employees, setEmployees] = useState<EligibleEmployee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  const loading = dataLoading || sessionStatus === 'loading' || !currentUserId;
 
   const [giveFeedbackOpen, setGiveFeedbackOpen] = useState(false);
   const [requestFeedbackOpen, setRequestFeedbackOpen] = useState(false);
@@ -98,23 +118,66 @@ export default function FeedbackPage() {
   const [deadline, setDeadline] = useState('');
   const [submittingRequest, setSubmittingRequest] = useState(false);
 
+  const tabs: TabDefinition<TabType>[] = [
+    { key: 'received', label: 'Received', count: activeTab === 'received' && feedbackPagination ? feedbackPagination.total : undefined },
+    { key: 'given', label: 'Given', count: activeTab === 'given' && feedbackPagination ? feedbackPagination.total : undefined },
+    { key: 'requests', label: 'Requests', count: activeTab === 'requests' && requestsToMePagination ? requestsToMePagination.total : undefined },
+  ];
+
+  const updateParams = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  const handleTabChange = useCallback((tab: TabType) => {
+    updateParams({ tab, page: null });
+  }, [updateParams]);
+
   const fetchFeedback = useCallback(async () => {
+    setDataLoading(true);
     try {
-      const res = await fetch('/api/feedback');
+      const direction = activeTab === 'received' ? 'received' : 'given';
+      const params = new URLSearchParams({ direction, page: page.toString(), limit: limit.toString() });
+      const res = await fetch(`/api/feedback?${params.toString()}`);
       const json = await res.json();
-      if (json.success) setFeedbackItems(json.data);
+      if (json.success && json.data) {
+        setFeedbackItems(json.data.data);
+        setFeedbackPagination(json.data.pagination);
+      }
     } catch {
-      // silently fail
+    } finally {
+      setDataLoading(false);
     }
-  }, []);
+  }, [activeTab, page, limit]);
 
   const fetchRequests = useCallback(async () => {
+    setDataLoading(true);
     try {
-      const res = await fetch('/api/feedback-requests');
-      const json = await res.json();
-      if (json.success) setFeedbackRequests(json.data);
+      const toMeParams = new URLSearchParams({ direction: 'to_me', page: '1', limit: '50' });
+      const fromMeParams = new URLSearchParams({ direction: 'from_me', page: '1', limit: '50' });
+      const [toMeRes, fromMeRes] = await Promise.all([
+        fetch(`/api/feedback-requests?${toMeParams.toString()}`),
+        fetch(`/api/feedback-requests?${fromMeParams.toString()}`),
+      ]);
+      const [toMeJson, fromMeJson] = await Promise.all([toMeRes.json(), fromMeRes.json()]);
+      if (toMeJson.success && toMeJson.data) {
+        setRequestsToMe(toMeJson.data.data);
+        setRequestsToMePagination(toMeJson.data.pagination);
+      }
+      if (fromMeJson.success && fromMeJson.data) {
+        setMyRequests(fromMeJson.data.data);
+        setMyRequestsPagination(fromMeJson.data.pagination);
+      }
     } catch {
-      // silently fail
+    } finally {
+      setDataLoading(false);
     }
   }, []);
 
@@ -124,15 +187,21 @@ export default function FeedbackPage() {
       const json = await res.json();
       if (json.success) setEmployees(json.data);
     } catch {
-      // silently fail
     }
   }, []);
 
   useEffect(() => {
-    Promise.all([fetchFeedback(), fetchRequests(), fetchEmployees()]).finally(() =>
-      setLoading(false)
-    );
-  }, [fetchFeedback, fetchRequests, fetchEmployees]);
+    fetchEmployees();
+  }, [fetchEmployees]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (activeTab === 'requests') {
+      fetchRequests();
+    } else {
+      fetchFeedback();
+    }
+  }, [activeTab, currentUserId, fetchFeedback, fetchRequests]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -145,7 +214,6 @@ export default function FeedbackPage() {
         prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
       );
     } catch {
-      // silently fail
     }
   };
 
@@ -190,11 +258,13 @@ export default function FeedbackPage() {
       if (json.success) {
         resetGiveFeedbackForm();
         setGiveFeedbackOpen(false);
-        fetchFeedback();
-        fetchRequests();
+        if (activeTab === 'requests') {
+          fetchRequests();
+        } else {
+          fetchFeedback();
+        }
       }
     } catch {
-      // silently fail
     } finally {
       setSubmittingFeedback(false);
     }
@@ -220,7 +290,6 @@ export default function FeedbackPage() {
         fetchRequests();
       }
     } catch {
-      // silently fail
     } finally {
       setSubmittingRequest(false);
     }
@@ -232,6 +301,41 @@ export default function FeedbackPage() {
     setRespondingToRequestId(request.id);
     setGiveFeedbackOpen(true);
   };
+
+  const renderFeedbackContent = (item: FeedbackItem) => (
+    <CardContent className="flex flex-col gap-4">
+      {item.keepDoing && (
+        <div className="flex flex-col gap-1" data-testid={`section-keep-doing-${item.id}`}>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Keep Doing
+          </span>
+          <p className="text-sm">{item.keepDoing}</p>
+        </div>
+      )}
+      {item.considerImproving && (
+        <div className="flex flex-col gap-1" data-testid={`section-consider-improving-${item.id}`}>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Consider Improving
+          </span>
+          <p className="text-sm">{item.considerImproving}</p>
+        </div>
+      )}
+      {item.tags && item.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {item.tags.map((tag) => (
+            <Badge
+              key={tag}
+              variant="secondary"
+              className="no-default-hover-elevate no-default-active-elevate"
+              data-testid={`badge-tag-${item.id}-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </CardContent>
+  );
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -267,62 +371,24 @@ export default function FeedbackPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 border-b">
-        <button
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === 'received'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground'
-          }`}
-          onClick={() => setActiveTab('received')}
-          data-testid="tab-received"
-        >
-          Received
-        </button>
-        <button
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === 'requests'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground'
-          }`}
-          onClick={() => setActiveTab('requests')}
-          data-testid="tab-requests"
-        >
-          Requests
-        </button>
-      </div>
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {loading ? (
-        <div className="flex flex-col gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-4 w-48 bg-muted animate-pulse rounded" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-3 w-full bg-muted animate-pulse rounded mb-2" />
-                <div className="h-3 w-2/3 bg-muted animate-pulse rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <SkeletonCards />
       ) : activeTab === 'received' ? (
         feedbackItems.length === 0 ? (
-          <Card data-testid="empty-state-received">
-            <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-              <MessageSquare className="size-10 text-muted-foreground" />
-              <p className="text-muted-foreground text-sm text-center">
-                No feedback received yet. Ask a colleague for feedback to get started.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Inbox}
+            message="No feedback received yet. Ask a colleague for feedback to get started."
+            testId="empty-state-received"
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {feedbackItems.map((item) => (
               <Card
                 key={item.id}
                 className="relative"
-                data-testid={`card-feedback-${item.id}`}
+                data-testid={`card-feedback-received-${item.id}`}
                 onClick={() => {
                   if (!item.isRead) markAsRead(item.id);
                 }}
@@ -334,112 +400,171 @@ export default function FeedbackPage() {
                   />
                 )}
                 <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
-                  <span className="font-medium text-sm" data-testid={`text-sender-${item.id}`}>
-                    {item.senderName ?? 'Anonymous'}
-                  </span>
-                  <span
-                    className="text-xs text-muted-foreground"
-                    data-testid={`text-date-${item.id}`}
-                  >
-                    {formatDate(item.createdAt)}
+                  <div className="flex items-center gap-2">
+                    <ArrowDownLeft className="size-4 text-muted-foreground" />
+                    <span className="font-medium text-sm" data-testid={`text-sender-${item.id}`}>
+                      {item.isAnonymous ? 'Anonymous' : (item.senderName ?? 'Unknown')}
+                    </span>
+                    {item.isAnonymous && (
+                      <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                        <EyeOff className="size-3" />
+                        Anonymous
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground" data-testid={`text-date-${item.id}`}>
+                    {formatShortDate(item.createdAt)}
                   </span>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  {item.keepDoing && (
-                    <div className="flex flex-col gap-1" data-testid={`section-keep-doing-${item.id}`}>
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Keep Doing
-                      </span>
-                      <p className="text-sm">{item.keepDoing}</p>
-                    </div>
-                  )}
-                  {item.considerImproving && (
-                    <div
-                      className="flex flex-col gap-1"
-                      data-testid={`section-consider-improving-${item.id}`}
-                    >
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Consider Improving
-                      </span>
-                      <p className="text-sm">{item.considerImproving}</p>
-                    </div>
-                  )}
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {item.tags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="no-default-hover-elevate no-default-active-elevate"
-                          data-testid={`badge-tag-${item.id}-${tag.toLowerCase().replace(/\s+/g, '-')}`}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
+                {renderFeedbackContent(item)}
               </Card>
             ))}
           </div>
         )
-      ) : feedbackRequests.length === 0 ? (
-        <Card data-testid="empty-state-requests">
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-            <Clock className="size-10 text-muted-foreground" />
-            <p className="text-muted-foreground text-sm text-center">
-              No feedback requests yet. Request feedback from a colleague to get started.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {feedbackRequests.map((req) => (
-            <Card key={req.id} data-testid={`card-request-${req.id}`}>
-              <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium text-sm" data-testid={`text-requester-${req.id}`}>
-                    {req.requesterName}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(req.createdAt)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge
-                    variant={req.status === 'completed' ? 'success' : 'secondary'}
-                    className="no-default-hover-elevate no-default-active-elevate"
-                    data-testid={`badge-status-${req.id}`}
-                  >
-                    {req.status === 'completed' ? (
-                      <Check className="size-3" />
-                    ) : (
-                      <Clock className="size-3" />
+      ) : activeTab === 'given' ? (
+        feedbackItems.length === 0 ? (
+          <EmptyState
+            icon={Send}
+            message="You haven't given any feedback yet. Share constructive feedback with your colleagues."
+            testId="empty-state-given"
+          />
+        ) : (
+          <div className="flex flex-col gap-4">
+            {feedbackItems.map((item) => (
+              <Card
+                key={item.id}
+                data-testid={`card-feedback-given-${item.id}`}
+              >
+                <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpRight className="size-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">To</span>
+                    <span className="font-medium text-sm" data-testid={`text-recipient-${item.id}`}>
+                      {item.recipientName}
+                    </span>
+                    {item.isAnonymous && (
+                      <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                        <EyeOff className="size-3" />
+                        Sent anonymously
+                      </Badge>
                     )}
-                    {req.status}
-                  </Badge>
-                  {req.status === 'pending' && (
-                    <Button
-                      size="sm"
-                      onClick={() => openRespondDialog(req)}
-                      data-testid={`button-respond-${req.id}`}
-                    >
-                      <Send />
-                      Respond
-                    </Button>
+                  </div>
+                  <span className="text-xs text-muted-foreground" data-testid={`text-date-${item.id}`}>
+                    {formatShortDate(item.createdAt)}
+                  </span>
+                </CardHeader>
+                {renderFeedbackContent(item)}
+              </Card>
+            ))}
+          </div>
+        )
+      ) : (
+        <div className="flex flex-col gap-6">
+          {requestsToMe.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Pending from you
+              </h3>
+              {requestsToMe.map((req) => (
+                <Card key={req.id} data-testid={`card-request-to-me-${req.id}`}>
+                  <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-sm" data-testid={`text-requester-${req.id}`}>
+                        {req.requesterName} requested your feedback
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatShortDate(req.createdAt)}
+                        {req.deadline && ` \u00B7 Due ${formatShortDate(req.deadline)}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge
+                        variant={req.status === 'completed' ? 'success' : 'secondary'}
+                        className="no-default-hover-elevate no-default-active-elevate"
+                        data-testid={`badge-status-${req.id}`}
+                      >
+                        {req.status === 'completed' ? <Check className="size-3" /> : <Clock className="size-3" />}
+                        {req.status}
+                      </Badge>
+                      {req.status === 'pending' && (
+                        <Button
+                          size="sm"
+                          onClick={() => openRespondDialog(req)}
+                          data-testid={`button-respond-${req.id}`}
+                        >
+                          <Send />
+                          Respond
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  {req.prompt && (
+                    <CardContent>
+                      <p className="text-sm" data-testid={`text-prompt-${req.id}`}>
+                        {req.prompt}
+                      </p>
+                    </CardContent>
                   )}
-                </div>
-              </CardHeader>
-              {req.prompt && (
-                <CardContent>
-                  <p className="text-sm" data-testid={`text-prompt-${req.id}`}>
-                    {req.prompt}
-                  </p>
-                </CardContent>
-              )}
-            </Card>
-          ))}
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {myRequests.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Your requests
+              </h3>
+              {myRequests.map((req) => (
+                <Card key={req.id} data-testid={`card-my-request-${req.id}`}>
+                  <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-sm" data-testid={`text-responder-${req.id}`}>
+                        Requested from {req.responderName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatShortDate(req.createdAt)}
+                        {req.deadline && ` \u00B7 Due ${formatShortDate(req.deadline)}`}
+                      </span>
+                    </div>
+                    <Badge
+                      variant={req.status === 'completed' ? 'success' : 'secondary'}
+                      className="no-default-hover-elevate no-default-active-elevate"
+                      data-testid={`badge-status-${req.id}`}
+                    >
+                      {req.status === 'completed' ? <Check className="size-3" /> : <Clock className="size-3" />}
+                      {req.status}
+                    </Badge>
+                  </CardHeader>
+                  {req.prompt && (
+                    <CardContent>
+                      <p className="text-sm" data-testid={`text-prompt-${req.id}`}>
+                        {req.prompt}
+                      </p>
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {requestsToMe.length === 0 && myRequests.length === 0 && (
+            <EmptyState
+              icon={Clock}
+              message="No feedback requests yet. Request feedback from a colleague to get started."
+              testId="empty-state-requests"
+            />
+          )}
         </div>
+      )}
+
+      {(activeTab === 'received' || activeTab === 'given') && feedbackPagination && (
+        <Pagination
+          pagination={feedbackPagination}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          showItemsPerPageSelector={true}
+        />
       )}
 
       <Dialog
@@ -452,6 +577,7 @@ export default function FeedbackPage() {
         <DialogContent data-testid="dialog-give-feedback">
           <DialogHeader>
             <DialogTitle>Give Feedback</DialogTitle>
+            <DialogDescription>Share constructive feedback with a team member.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
@@ -546,6 +672,7 @@ export default function FeedbackPage() {
         <DialogContent data-testid="dialog-request-feedback">
           <DialogHeader>
             <DialogTitle>Request Feedback</DialogTitle>
+            <DialogDescription>Ask a team member for constructive feedback.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">

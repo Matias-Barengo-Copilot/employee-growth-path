@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count, or, ne, desc } from "drizzle-orm";
 import { getAuthenticatedUser } from "@/lib/middleware/auth";
 import { db } from "@/db/client";
 import { goals, employees, activities } from "@/db/schema";
 import { successResponse, errorResponse } from "@/lib/utils/response";
+import { parsePaginationParams, buildPaginationMeta, paginationOffset } from "@/lib/utils/pagination";
 
 const createGoalSchema = z.object({
   title: z.string().min(1).max(500),
@@ -20,6 +21,42 @@ const createGoalSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
+    const { searchParams } = new URL(request.url);
+    const { page, limit } = parsePaginationParams(searchParams);
+    const category = searchParams.get('category');
+    const scope = searchParams.get('scope') || 'my';
+
+    const conditions = [eq(goals.companyId, user.companyId)];
+
+    if (scope === 'team') {
+      conditions.push(ne(goals.employeeId, user.employeeId));
+
+      const visibilityConditions = [
+        eq(goals.visibility, 'team' as const),
+      ];
+
+      if (user.role === 'supervisor' || user.role === 'hr') {
+        visibilityConditions.push(eq(goals.visibility, 'manager' as const));
+      }
+
+      conditions.push(or(...visibilityConditions)!);
+    } else {
+      conditions.push(eq(goals.employeeId, user.employeeId));
+    }
+
+    if (category && ['growth', 'delivery', 'leadership', 'learning'].includes(category)) {
+      conditions.push(eq(goals.category, category as 'growth' | 'delivery' | 'leadership' | 'learning'));
+    }
+
+    const whereClause = and(...conditions);
+
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(goals)
+      .where(whereClause);
+
+    const total = totalResult?.count ?? 0;
+    const pagination = buildPaginationMeta(total, page, limit);
 
     const result = await db
       .select({
@@ -40,15 +77,12 @@ export async function GET(request: NextRequest) {
       })
       .from(goals)
       .innerJoin(employees, eq(goals.employeeId, employees.id))
-      .where(
-        and(
-          eq(goals.employeeId, user.employeeId),
-          eq(goals.companyId, user.companyId)
-        )
-      )
-      .orderBy(goals.createdAt);
+      .where(whereClause)
+      .orderBy(desc(goals.updatedAt))
+      .limit(limit)
+      .offset(paginationOffset(pagination.page, limit));
 
-    return successResponse(result);
+    return successResponse({ data: result, pagination });
   } catch (error) {
     return errorResponse(error);
   }

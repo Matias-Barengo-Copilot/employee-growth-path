@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Zap, Send, ArrowRight, Plus } from 'lucide-react';
+import { Zap, Send, ArrowUpRight, ArrowDownLeft, Plus } from 'lucide-react';
+import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { SkeletonCards } from '@/components/shared/SkeletonCards';
+import { Pagination } from '@/components/shared/pagination/Pagination';
+import { usePagination } from '@/lib/hooks/usePagination';
+import { getRelativeTime } from '@/lib/utils/date';
+import type { PaginationMetadata } from '@/lib/types';
 
 interface Snap {
   id: string;
@@ -48,46 +57,70 @@ const PREDEFINED_TAGS = [
   'Mentorship',
 ];
 
-function getRelativeTime(dateString: string): string {
-  const now = Date.now();
-  const date = new Date(dateString).getTime();
-  const diffMs = now - date;
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  const diffWeeks = Math.floor(diffDays / 7);
-  const diffMonths = Math.floor(diffDays / 30);
-
-  if (diffSeconds < 60) return 'just now';
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-  if (diffWeeks < 5) return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
-  return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
-}
+type SnapTab = 'received' | 'sent';
 
 export default function SnapsPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const currentUserId = session?.user?.employeeId;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const tabParam = (searchParams.get('tab') as SnapTab) || 'received';
+  const activeTab = tabParam === 'sent' ? 'sent' : 'received';
+  const { page, limit, handlePageChange, handleItemsPerPageChange } = usePagination({
+    defaultPage: 1,
+    defaultLimit: 20,
+  });
+
   const [snaps, setSnaps] = useState<Snap[]>([]);
+  const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
   const [employees, setEmployees] = useState<EligibleEmployee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  const loading = dataLoading || sessionStatus === 'loading' || !currentUserId;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [recipientId, setRecipientId] = useState('');
   const [message, setMessage] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  const tabs: TabDefinition<SnapTab>[] = [
+    { key: 'received', label: 'Received', count: pagination && activeTab === 'received' ? pagination.total : undefined },
+    { key: 'sent', label: 'Sent', count: pagination && activeTab === 'sent' ? pagination.total : undefined },
+  ];
+
+  const updateParams = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  const handleTabChange = useCallback((tab: SnapTab) => {
+    updateParams({ tab, page: null });
+  }, [updateParams]);
+
   const fetchSnaps = useCallback(async () => {
+    setDataLoading(true);
     try {
-      const res = await fetch('/api/snaps');
+      const direction = activeTab === 'received' ? 'received' : 'sent';
+      const params = new URLSearchParams({ direction, page: page.toString(), limit: limit.toString() });
+      const res = await fetch(`/api/snaps?${params.toString()}`);
       const json = await res.json();
-      if (json.success) setSnaps(json.data);
+      if (json.success && json.data) {
+        setSnaps(json.data.data);
+        setPagination(json.data.pagination);
+      }
     } catch {
-      // silently fail
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
-  }, []);
+  }, [activeTab, page, limit]);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -95,14 +128,18 @@ export default function SnapsPage() {
       const json = await res.json();
       if (json.success) setEmployees(json.data);
     } catch {
-      // silently fail
     }
   }, []);
 
   useEffect(() => {
-    fetchSnaps();
     fetchEmployees();
-  }, [fetchSnaps, fetchEmployees]);
+  }, [fetchEmployees]);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchSnaps();
+    }
+  }, [fetchSnaps, currentUserId]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -136,10 +173,61 @@ export default function SnapsPage() {
         fetchSnaps();
       }
     } catch {
-      // silently fail
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const renderSnapCard = (snap: Snap) => {
+    const isReceived = activeTab === 'received';
+
+    return (
+      <Card key={snap.id} data-testid={`card-snap-${snap.id}`}>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isReceived ? (
+              <ArrowDownLeft className="size-4 text-muted-foreground" />
+            ) : (
+              <ArrowUpRight className="size-4 text-muted-foreground" />
+            )}
+            <span className="text-xs text-muted-foreground">
+              {isReceived ? 'From' : 'To'}
+            </span>
+            <span
+              className="font-medium text-sm"
+              data-testid={`text-${isReceived ? 'sender' : 'recipient'}-${snap.id}`}
+            >
+              {isReceived ? snap.senderName : snap.recipientName}
+            </span>
+          </div>
+          <span
+            className="text-xs text-muted-foreground"
+            data-testid={`text-time-${snap.id}`}
+          >
+            {getRelativeTime(snap.createdAt)}
+          </span>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm" data-testid={`text-message-${snap.id}`}>
+            {snap.message}
+          </p>
+          {snap.tags && snap.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {snap.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="no-default-hover-elevate no-default-active-elevate"
+                  data-testid={`badge-snap-tag-${snap.id}-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -229,72 +317,33 @@ export default function SnapsPage() {
         </Dialog>
       </div>
 
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
+
       {loading ? (
-        <div className="flex flex-col gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-4 w-48 bg-muted animate-pulse rounded" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-3 w-full bg-muted animate-pulse rounded mb-2" />
-                <div className="h-3 w-2/3 bg-muted animate-pulse rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <SkeletonCards />
       ) : snaps.length === 0 ? (
-        <Card data-testid="empty-state">
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-            <Zap className="size-10 text-muted-foreground" />
-            <p className="text-muted-foreground text-sm text-center">
-              No recognition snaps yet. Be the first to recognize a team member!
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={activeTab === 'received' ? Zap : Send}
+          message={
+            activeTab === 'received'
+              ? 'No recognition snaps received yet. Your team can send you snaps to recognize your work!'
+              : 'You haven\'t sent any recognition snaps yet. Be the first to recognize a team member!'
+          }
+          testId={`empty-state-${activeTab}`}
+        />
       ) : (
         <div className="flex flex-col gap-4">
-          {snaps.map((snap) => (
-            <Card key={snap.id} data-testid={`card-snap-${snap.id}`}>
-              <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm" data-testid={`text-sender-${snap.id}`}>
-                    {snap.senderName}
-                  </span>
-                  <ArrowRight className="size-4 text-muted-foreground" />
-                  <span className="font-medium text-sm" data-testid={`text-recipient-${snap.id}`}>
-                    {snap.recipientName}
-                  </span>
-                </div>
-                <span
-                  className="text-xs text-muted-foreground"
-                  data-testid={`text-time-${snap.id}`}
-                >
-                  {getRelativeTime(snap.createdAt)}
-                </span>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <p className="text-sm" data-testid={`text-message-${snap.id}`}>
-                  {snap.message}
-                </p>
-                {snap.tags && snap.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {snap.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="no-default-hover-elevate no-default-active-elevate"
-                        data-testid={`badge-snap-tag-${snap.id}-${tag.toLowerCase().replace(/\s+/g, '-')}`}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {snaps.map(renderSnapCard)}
         </div>
+      )}
+
+      {pagination && (
+        <Pagination
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          showItemsPerPageSelector={true}
+        />
       )}
     </div>
   );

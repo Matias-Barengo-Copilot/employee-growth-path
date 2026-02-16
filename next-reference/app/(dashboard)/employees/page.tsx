@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { EmployeesList } from '@/components/shared/employees/EmployeesList';
-import { getEmployeesPaginated } from '@/lib/api/employees';
+import { getEmployeesPaginated, getEmployeeById } from '@/lib/api/employees';
 import { EmployeeListItem } from '@/lib/types/employee';
 import { usePagination } from '@/lib/hooks/usePagination';
 import { PaginationMetadata } from '@/lib/types';
-import { employeesFilters } from '@/lib/config/filters';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -21,16 +20,14 @@ export default function EmployeesPage() {
     defaultLimit: 20,
   });
 
-  // Extract filter values to avoid infinite loops
-  // Use searchParams.toString() for stable comparison
   const searchParamsString = searchParams.toString();
   const roleFilter = useMemo(() => {
     const params = new URLSearchParams(searchParamsString);
-    return params.get('role') || undefined;
+    return params.get('role') || 'all';
   }, [searchParamsString]);
-  const searchFilter = useMemo(() => {
+  const selectedMemberId = useMemo(() => {
     const params = new URLSearchParams(searchParamsString);
-    return params.get('search') || undefined;
+    return params.get('memberId') || '';
   }, [searchParamsString]);
 
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);
@@ -38,48 +35,73 @@ export default function EmployeesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getEmployeesPaginated({
-        role: roleFilter,
-        search: searchFilter,
-        page,
-        limit,
-      });
-
-      if (response.success && response.data) {
-        setEmployees(response.data.data as EmployeeListItem[]);
-        setPagination(response.data.pagination);
+      if (selectedMemberId) {
+        const member = await getEmployeeById(selectedMemberId);
+        if (member) {
+          setEmployees([member as EmployeeListItem]);
+          setPagination({ total: 1, page: 1, limit: 1, totalPages: 1 });
+        } else {
+          setEmployees([]);
+          setPagination(null);
+        }
       } else {
-        setError(response.error?.message || 'Failed to fetch employees');
+        const response = await getEmployeesPaginated({
+          role: roleFilter !== 'all' ? roleFilter : undefined,
+          page,
+          limit,
+        });
+
+        if (response.success && response.data) {
+          setEmployees(response.data.data as EmployeeListItem[]);
+          setPagination(response.data.pagination);
+        } else {
+          setError(response.error?.message || 'Failed to fetch members');
+        }
       }
     } catch (err) {
-      if (err instanceof Error && err.message.includes('Only HR')) {
-        // Redirect if not HR
-        router.push('/');
-        return;
-      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [page, limit, roleFilter, selectedMemberId]);
 
   useEffect(() => {
     fetchEmployees();
-    // Note: router is stable and only used in catch block for error handling
-    // It doesn't need to be in dependencies as it's a stable reference from useRouter()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit, roleFilter, searchFilter]);
+  }, [fetchEmployees]);
+
+  const handleMemberSelect = useCallback((value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set('memberId', value);
+      params.delete('role');
+    } else {
+      params.delete('memberId');
+    }
+    params.delete('page');
+    router.push(`/employees?${params.toString()}`);
+  }, [router, searchParams]);
+
+  const handleRoleFilterChange = useCallback((value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value && value !== 'all') {
+      params.set('role', value);
+    } else {
+      params.delete('role');
+    }
+    params.delete('page');
+    router.push(`/employees?${params.toString()}`);
+  }, [router, searchParams]);
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-semibold">Members</h2>
-          <p className="text-muted-foreground mt-1">Manage all members in your organization</p>
+          <h2 className="text-2xl font-semibold">Directory</h2>
+          <p className="text-muted-foreground mt-1">Your team members</p>
         </div>
         <Card>
           <CardContent className="flex items-center justify-center py-12">
@@ -94,8 +116,8 @@ export default function EmployeesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-semibold">Members</h2>
-          <p className="text-muted-foreground mt-1">Manage all members in your organization</p>
+          <h2 className="text-2xl font-semibold">Directory</h2>
+          <p className="text-muted-foreground mt-1">Your team members</p>
         </div>
         <Card>
           <CardContent className="py-12">
@@ -106,7 +128,6 @@ export default function EmployeesPage() {
     );
   }
 
-  // Convert session user to AuthenticatedUser format
   const authenticatedUser = session?.user?.employeeId ? {
     employeeId: session.user.employeeId,
     role: session.user.role ?? 'employee' as const,
@@ -116,12 +137,15 @@ export default function EmployeesPage() {
   } : null;
 
   return (
-    <EmployeesList 
-      employees={employees} 
+    <EmployeesList
+      employees={employees}
       user={authenticatedUser}
-      filters={employeesFilters}
       userRole={session?.user?.role}
       pagination={pagination}
+      selectedMemberId={selectedMemberId}
+      roleFilter={roleFilter}
+      onMemberSelect={handleMemberSelect}
+      onRoleFilterChange={handleRoleFilterChange}
       onPageChange={handlePageChange}
       onItemsPerPageChange={handleItemsPerPageChange}
       onRefresh={fetchEmployees}

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { UserRole } from '@/lib/types/navigation';
 import { getNavigationItemsByRole } from '@/lib/constants/navigation';
 import { NavItem } from './NavItem';
+import { NavItemGroup } from './NavItemGroup';
 import { MobileMenuButton } from './MobileMenuButton';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -111,11 +112,20 @@ export function Sidebar({ userRole, canViewAllLeaveRequests = false }: SidebarPr
           <ul className="space-y-1">
             {navigationItems.map((item, index) => (
               <li key={`${item.href}-${item.label}-${index}`}>
-                <NavItem
-                  {...item}
-                  isActive={item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)}
-                  isCollapsed={isCollapsed}
-                />
+                {item.children && item.children.length > 0 ? (
+                  <NavItemGroup
+                    label={item.label}
+                    icon={item.icon}
+                    children={item.children}
+                    isCollapsed={isCollapsed}
+                  />
+                ) : (
+                  <NavItem
+                    {...item}
+                    isActive={item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)}
+                    isCollapsed={isCollapsed}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -176,11 +186,20 @@ export function Sidebar({ userRole, canViewAllLeaveRequests = false }: SidebarPr
           <ul className="space-y-1">
             {navigationItems.map((item, index) => (
               <li key={`${item.href}-${item.label}-${index}`}>
-                <NavItem
-                  {...item}
-                  isActive={item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)}
-                  isCollapsed={false}
-                />
+                {item.children && item.children.length > 0 ? (
+                  <NavItemGroup
+                    label={item.label}
+                    icon={item.icon}
+                    children={item.children}
+                    isCollapsed={false}
+                  />
+                ) : (
+                  <NavItem
+                    {...item}
+                    isActive={item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)}
+                    isCollapsed={false}
+                  />
+                )}
               </li>
             ))}
           </ul>

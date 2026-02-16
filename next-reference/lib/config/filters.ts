@@ -88,14 +88,14 @@ export const allLeaveRequestsFilters: FilterConfig[] = [
   {
     key: 'employeeId',
     type: 'autocomplete',
-    label: 'Employee',
-    placeholder: 'Select employee',
+    label: 'Member',
+    placeholder: 'Select member',
     visibleForRoles: ['hr'],
     fetchOptions: '/api/employees',
     optionLabel: (item: { id: string; name?: string; email?: string; [key: string]: unknown }) => {
-      const name = item.name ?? '';
-      const email = item.email ?? '';
-      return `${name} (${email})`;
+      const name = item.name || 'Unknown';
+      const email = item.email;
+      return email ? `${name} (${email})` : name;
     },
     optionValue: (item: { id: string; [key: string]: unknown }) => item.id,
   },
@@ -111,7 +111,7 @@ export const employeesFilters: FilterConfig[] = [
     label: 'Role',
     placeholder: 'All roles',
     options: [
-      { value: 'employee', label: 'Employee' },
+      { value: 'employee', label: 'Member' },
       { value: 'supervisor', label: 'Supervisor' },
       { value: 'hr', label: 'HR' },
     ],
