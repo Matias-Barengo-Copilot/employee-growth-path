@@ -24,6 +24,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MessageSquare, Send, Plus, Clock, Check, Eye, EyeOff, ArrowUpRight, ArrowDownLeft, Inbox } from 'lucide-react';
+import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { SkeletonCards } from '@/components/shared/SkeletonCards';
+import { formatShortDate } from '@/lib/utils/date';
 
 interface FeedbackItem {
   id: string;
@@ -68,14 +72,6 @@ const FEEDBACK_TAGS = [
   'Initiative',
   'Reliability',
 ];
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
 
 type TabType = 'received' | 'given' | 'requests';
 
@@ -261,7 +257,7 @@ export default function FeedbackPage() {
     setGiveFeedbackOpen(true);
   };
 
-  const tabs: { key: TabType; label: string; count?: number }[] = [
+  const tabs: TabDefinition<TabType>[] = [
     { key: 'received', label: 'Received', count: receivedFeedback.filter((f) => !f.isRead).length },
     { key: 'given', label: 'Given' },
     { key: 'requests', label: 'Requests', count: requestsToMe.filter((r) => r.status === 'pending').length },
@@ -336,52 +332,17 @@ export default function FeedbackPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 border-b">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 flex items-center gap-1.5 ${
-              activeTab === tab.key
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground'
-            }`}
-            onClick={() => setActiveTab(tab.key)}
-            data-testid={`tab-${tab.key}`}
-          >
-            {tab.label}
-            {tab.count !== undefined && tab.count > 0 && (
-              <Badge variant="default" className="no-default-hover-elevate no-default-active-elevate text-[10px] px-1.5 py-0 min-w-[18px] h-[18px] flex items-center justify-center">
-                {tab.count}
-              </Badge>
-            )}
-          </button>
-        ))}
-      </div>
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {loading ? (
-        <div className="flex flex-col gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-4 w-48 bg-muted animate-pulse rounded" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-3 w-full bg-muted animate-pulse rounded mb-2" />
-                <div className="h-3 w-2/3 bg-muted animate-pulse rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <SkeletonCards />
       ) : activeTab === 'received' ? (
         receivedFeedback.length === 0 ? (
-          <Card data-testid="empty-state-received">
-            <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-              <Inbox className="size-10 text-muted-foreground" />
-              <p className="text-muted-foreground text-sm text-center">
-                No feedback received yet. Ask a colleague for feedback to get started.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Inbox}
+            message="No feedback received yet. Ask a colleague for feedback to get started."
+            testId="empty-state-received"
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {receivedFeedback.map((item) => (
@@ -413,7 +374,7 @@ export default function FeedbackPage() {
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground" data-testid={`text-date-${item.id}`}>
-                    {formatDate(item.createdAt)}
+                    {formatShortDate(item.createdAt)}
                   </span>
                 </CardHeader>
                 {renderFeedbackContent(item)}
@@ -423,14 +384,11 @@ export default function FeedbackPage() {
         )
       ) : activeTab === 'given' ? (
         givenFeedback.length === 0 ? (
-          <Card data-testid="empty-state-given">
-            <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-              <Send className="size-10 text-muted-foreground" />
-              <p className="text-muted-foreground text-sm text-center">
-                You haven&apos;t given any feedback yet. Share constructive feedback with your colleagues.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Send}
+            message="You haven't given any feedback yet. Share constructive feedback with your colleagues."
+            testId="empty-state-given"
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {givenFeedback.map((item) => (
@@ -453,7 +411,7 @@ export default function FeedbackPage() {
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground" data-testid={`text-date-${item.id}`}>
-                    {formatDate(item.createdAt)}
+                    {formatShortDate(item.createdAt)}
                   </span>
                 </CardHeader>
                 {renderFeedbackContent(item)}
@@ -476,8 +434,8 @@ export default function FeedbackPage() {
                         {req.requesterName} requested your feedback
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {formatDate(req.createdAt)}
-                        {req.deadline && ` \u00B7 Due ${formatDate(req.deadline)}`}
+                        {formatShortDate(req.createdAt)}
+                        {req.deadline && ` \u00B7 Due ${formatShortDate(req.deadline)}`}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -526,8 +484,8 @@ export default function FeedbackPage() {
                         Requested from {req.responderName}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {formatDate(req.createdAt)}
-                        {req.deadline && ` \u00B7 Due ${formatDate(req.deadline)}`}
+                        {formatShortDate(req.createdAt)}
+                        {req.deadline && ` \u00B7 Due ${formatShortDate(req.deadline)}`}
                       </span>
                     </div>
                     <Badge
@@ -552,14 +510,11 @@ export default function FeedbackPage() {
           )}
 
           {requestsToMe.length === 0 && myRequests.length === 0 && (
-            <Card data-testid="empty-state-requests">
-              <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-                <Clock className="size-10 text-muted-foreground" />
-                <p className="text-muted-foreground text-sm text-center">
-                  No feedback requests yet. Request feedback from a colleague to get started.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Clock}
+              message="No feedback requests yet. Request feedback from a colleague to get started."
+              testId="empty-state-requests"
+            />
           )}
         </div>
       )}
