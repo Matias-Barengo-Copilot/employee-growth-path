@@ -77,6 +77,7 @@ export default function EmployeesPage() {
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
       params.set('memberId', value);
+      params.delete('role');
     } else {
       params.delete('memberId');
     }

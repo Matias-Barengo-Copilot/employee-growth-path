@@ -192,9 +192,9 @@ export function EmployeesList({
                 placeholder: 'Search member...',
                 fetchOptions: '/api/employees',
                 optionLabel: (item: { id: string; name?: string; email?: string; [key: string]: unknown }) => {
-                  const name = item.name ?? '';
-                  const email = item.email ?? '';
-                  return `${name} (${email})`;
+                  const name = item.name || 'Unknown';
+                  const email = item.email;
+                  return email ? `${name} (${email})` : name;
                 },
                 optionValue: (item: { id: string; [key: string]: unknown }) => item.id,
               }}
@@ -202,7 +202,11 @@ export function EmployeesList({
               onChange={onMemberSelect}
             />
           </div>
-          <Select value={roleFilter} onValueChange={onRoleFilterChange}>
+          <Select
+            value={roleFilter}
+            onValueChange={onRoleFilterChange}
+            disabled={!!selectedMemberId}
+          >
             <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-role-filter">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="All Roles" />

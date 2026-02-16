@@ -93,9 +93,9 @@ export const allLeaveRequestsFilters: FilterConfig[] = [
     visibleForRoles: ['hr'],
     fetchOptions: '/api/employees',
     optionLabel: (item: { id: string; name?: string; email?: string; [key: string]: unknown }) => {
-      const name = item.name ?? '';
-      const email = item.email ?? '';
-      return `${name} (${email})`;
+      const name = item.name || 'Unknown';
+      const email = item.email;
+      return email ? `${name} (${email})` : name;
     },
     optionValue: (item: { id: string; [key: string]: unknown }) => item.id,
   },
