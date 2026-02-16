@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Target, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/lib/hooks/useToast';
 import { Pagination } from '@/components/shared/pagination/Pagination';
+import { usePagination } from '@/lib/hooks/usePagination';
 import type { PaginationMetadata } from '@/lib/types';
 
 interface Goal {
@@ -105,8 +106,10 @@ const CATEGORIES: Category[] = ['all', 'growth', 'delivery', 'leadership', 'lear
 export default function GoalsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
-  const limit = parseInt(searchParams.get('limit') || '20', 10) || 20;
+  const { page, limit, handlePageChange, handleItemsPerPageChange } = usePagination({
+    defaultPage: 1,
+    defaultLimit: 20,
+  });
 
   const categoryParam = searchParams.get('category') as Category | null;
 
@@ -121,12 +124,6 @@ export default function GoalsPage() {
   const [formData, setFormData] = useState<GoalFormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const { success, error } = useToast();
-
-  const handlePageChange = useCallback((newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', newPage.toString());
-    router.push(`?${params.toString()}`, { scroll: false });
-  }, [searchParams, router]);
 
   const handleCategoryChange = useCallback((cat: Category) => {
     setActiveCategory(cat);
@@ -371,13 +368,16 @@ export default function GoalsPage() {
               </Card>
             ))}
           </div>
-          {pagination && pagination.totalPages > 1 && (
-            <Pagination
-              pagination={pagination}
-              onPageChange={handlePageChange}
-            />
-          )}
         </div>
+      )}
+
+      {pagination && (
+        <Pagination
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          showItemsPerPageSelector={true}
+        />
       )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

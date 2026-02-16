@@ -29,6 +29,7 @@ import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SkeletonCards } from '@/components/shared/SkeletonCards';
 import { Pagination } from '@/components/shared/pagination/Pagination';
+import { usePagination } from '@/lib/hooks/usePagination';
 import { formatShortDate } from '@/lib/utils/date';
 import type { PaginationMetadata } from '@/lib/types';
 
@@ -86,8 +87,10 @@ export default function FeedbackPage() {
 
   const tabParam = searchParams.get('tab') as TabType | null;
   const activeTab: TabType = tabParam === 'given' || tabParam === 'requests' ? tabParam : 'received';
-  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
-  const limit = parseInt(searchParams.get('limit') || '20', 10) || 20;
+  const { page, limit, handlePageChange, handleItemsPerPageChange } = usePagination({
+    defaultPage: 1,
+    defaultLimit: 20,
+  });
 
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
   const [feedbackPagination, setFeedbackPagination] = useState<PaginationMetadata | null>(null);
@@ -135,10 +138,6 @@ export default function FeedbackPage() {
 
   const handleTabChange = useCallback((tab: TabType) => {
     updateParams({ tab, page: null });
-  }, [updateParams]);
-
-  const handlePageChange = useCallback((newPage: number) => {
-    updateParams({ page: newPage.toString() });
   }, [updateParams]);
 
   const fetchFeedback = useCallback(async () => {
@@ -420,12 +419,6 @@ export default function FeedbackPage() {
                 {renderFeedbackContent(item)}
               </Card>
             ))}
-            {feedbackPagination && feedbackPagination.totalPages > 1 && (
-              <Pagination
-                pagination={feedbackPagination}
-                onPageChange={handlePageChange}
-              />
-            )}
           </div>
         )
       ) : activeTab === 'given' ? (
@@ -463,12 +456,6 @@ export default function FeedbackPage() {
                 {renderFeedbackContent(item)}
               </Card>
             ))}
-            {feedbackPagination && feedbackPagination.totalPages > 1 && (
-              <Pagination
-                pagination={feedbackPagination}
-                onPageChange={handlePageChange}
-              />
-            )}
           </div>
         )
       ) : (
@@ -569,6 +556,15 @@ export default function FeedbackPage() {
             />
           )}
         </div>
+      )}
+
+      {(activeTab === 'received' || activeTab === 'given') && feedbackPagination && (
+        <Pagination
+          pagination={feedbackPagination}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          showItemsPerPageSelector={true}
+        />
       )}
 
       <Dialog

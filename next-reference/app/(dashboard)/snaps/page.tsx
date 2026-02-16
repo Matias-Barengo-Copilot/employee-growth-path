@@ -26,6 +26,7 @@ import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SkeletonCards } from '@/components/shared/SkeletonCards';
 import { Pagination } from '@/components/shared/pagination/Pagination';
+import { usePagination } from '@/lib/hooks/usePagination';
 import { getRelativeTime } from '@/lib/utils/date';
 import type { PaginationMetadata } from '@/lib/types';
 
@@ -66,8 +67,10 @@ export default function SnapsPage() {
 
   const tabParam = (searchParams.get('tab') as SnapTab) || 'received';
   const activeTab = tabParam === 'sent' ? 'sent' : 'received';
-  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
-  const limit = parseInt(searchParams.get('limit') || '20', 10) || 20;
+  const { page, limit, handlePageChange, handleItemsPerPageChange } = usePagination({
+    defaultPage: 1,
+    defaultLimit: 20,
+  });
 
   const [snaps, setSnaps] = useState<Snap[]>([]);
   const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
@@ -100,10 +103,6 @@ export default function SnapsPage() {
 
   const handleTabChange = useCallback((tab: SnapTab) => {
     updateParams({ tab, page: null });
-  }, [updateParams]);
-
-  const handlePageChange = useCallback((newPage: number) => {
-    updateParams({ page: newPage.toString() });
   }, [updateParams]);
 
   const fetchSnaps = useCallback(async () => {
@@ -335,13 +334,16 @@ export default function SnapsPage() {
       ) : (
         <div className="flex flex-col gap-4">
           {snaps.map(renderSnapCard)}
-          {pagination && pagination.totalPages > 1 && (
-            <Pagination
-              pagination={pagination}
-              onPageChange={handlePageChange}
-            />
-          )}
         </div>
+      )}
+
+      {pagination && (
+        <Pagination
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          showItemsPerPageSelector={true}
+        />
       )}
     </div>
   );
