@@ -80,7 +80,6 @@ function computeProfileCompletion(emp: EmployeeDetail): number {
     emp.strengths && emp.strengths.length > 0 ? 'filled' : null,
     emp.funFacts && emp.funFacts.length > 0 ? 'filled' : null,
     emp.slackHandle,
-    emp.profileImageUrl,
   ];
   const filled = fields.filter(Boolean).length;
   return Math.round((filled / fields.length) * 100);
@@ -560,16 +559,18 @@ function EditProfileForm({
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2">
             {(editForm.strengths || []).map((strength, i) => (
-              <Badge key={i} variant="secondary" className="gap-1">
+              <Badge key={i} variant="secondary" className="gap-1 pr-1">
                 {strength}
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-4 w-4 ml-0.5"
                   type="button"
                   onClick={() => removeArrayItem('strengths', i)}
-                  className="ml-1 rounded-full hover:bg-foreground/10 p-0.5"
                   data-testid={`button-remove-strength-${i}`}
                 >
                   <X className="h-3 w-3" />
-                </button>
+                </Button>
               </Badge>
             ))}
           </div>
@@ -611,16 +612,18 @@ function EditProfileForm({
           <ul className="space-y-2">
             {(editForm.funFacts || []).map((fact, i) => (
               <li key={i} className="flex items-center gap-2 text-sm">
-                <span className="text-primary">&#x2022;</span>
+                <span className="text-primary mt-0.5">&#x2022;</span>
                 <span className="flex-1">{fact}</span>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 shrink-0"
                   type="button"
                   onClick={() => removeArrayItem('funFacts', i)}
-                  className="rounded-full hover:bg-foreground/10 p-0.5"
                   data-testid={`button-remove-funfact-${i}`}
                 >
                   <X className="h-3 w-3" />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
