@@ -1,9 +1,11 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from '@/db/client';
 import { employees } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { detectAndSetInitialAdmin } from '@/lib/services/admin.service';
+import { isTestModeEnabledServer } from '@/lib/utils/test-mode';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -11,6 +13,21 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+    ...(isTestModeEnabledServer() ? [CredentialsProvider({
+      name: 'Test Account',
+      credentials: { email: { label: 'Email', type: 'email' } },
+      async authorize(credentials) {
+        const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+        if (!dbUrl || dbUrl.includes('dummy') || !credentials?.email) return null;
+        try {
+          const [employee] = await db.select().from(employees).where(and(eq(employees.email, credentials.email), eq(employees.isActive, true))).limit(1);
+          return employee ? { id: employee.id, email: employee.email, name: employee.name } : null;
+        } catch (error) {
+          console.error('Error in test credentials authorize:', error);
+          return null;
+        }
+      },
+    })] : []),
   ],
   callbacks: {
     async signIn({ user, account }) {
@@ -24,7 +41,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       const allowedDomains = ['@copilotinnovations.com', '@getboss.io'];
-      if (!allowedDomains.some(domain => user.email!.endsWith(domain))) {
+      if (!isTestModeEnabledServer() && !allowedDomains.some(domain => user.email!.endsWith(domain))) {
         return false;
       }
 
@@ -36,6 +53,7 @@ export const authOptions: NextAuthOptions = {
           .limit(1);
 
         if (!employee) {
+          if (isTestModeEnabledServer()) return false;
           const isInitialAdmin = await detectAndSetInitialAdmin(user.email, user.name || user.email.split('@')[0]);
           if (!isInitialAdmin) return false;
         }
