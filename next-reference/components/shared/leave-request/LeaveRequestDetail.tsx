@@ -149,13 +149,13 @@ export function LeaveRequestDetail({ user, leaveRequest }: LeaveRequestDetailPro
         </Badge>
       </div>
 
-      {/* Employee Information */}
+      {/* Member Information */}
       {leaveRequest.employee && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Employee Information
+              Member Information
             </CardTitle>
           </CardHeader>
           <CardContent>

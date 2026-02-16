@@ -23,7 +23,7 @@ import Link from 'next/link';
 import { formatLocalDate } from '@/lib/utils/date';
 
 const roleLabels: Record<string, string> = {
-  employee: 'Employee',
+  employee: 'Member',
   supervisor: 'Supervisor',
   hr: 'HR',
 };
@@ -35,7 +35,7 @@ const roleVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
 };
 
 const roleTypeLabels: Record<string, string> = {
-  employee: 'Employee',
+  employee: 'Member',
   individual_contractor: 'Individual Contractor',
 };
 

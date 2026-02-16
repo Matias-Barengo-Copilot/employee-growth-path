@@ -41,7 +41,7 @@ interface EmployeesListProps {
 type ViewMode = 'list' | 'create' | 'edit';
 
 const roleLabels: Record<string, string> = {
-  employee: 'Employee',
+  employee: 'Member',
   supervisor: 'Supervisor',
   hr: 'HR',
 };
@@ -86,7 +86,7 @@ export function EmployeesList({
       setSelectedEmployeeId(id);
       setViewMode('edit');
     } catch (error) {
-      toast.error('Error', error instanceof Error ? error.message : 'Failed to load employee');
+      toast.error('Error', error instanceof Error ? error.message : 'Failed to load member');
     } finally {
       setIsLoadingEmployee(false);
     }
@@ -105,11 +105,11 @@ export function EmployeesList({
     setIsDeleting(true);
     try {
       await deleteEmployee(employeeToDelete.id);
-      toast.success('Success', 'Employee deactivated successfully');
+      toast.success('Success', 'Member deactivated successfully');
       setEmployeeToDelete(null);
       refresh();
     } catch (error) {
-      toast.error('Error', error instanceof Error ? error.message : 'Failed to deactivate employee');
+      toast.error('Error', error instanceof Error ? error.message : 'Failed to deactivate member');
     } finally {
       setIsDeleting(false);
     }
@@ -128,10 +128,10 @@ export function EmployeesList({
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h2 className="text-2xl font-semibold">
-              {viewMode === 'edit' ? 'Edit Employee' : 'Add New Employee'}
+              {viewMode === 'edit' ? 'Edit Member' : 'Add New Member'}
             </h2>
             <p className="text-muted-foreground mt-1">
-              {viewMode === 'edit' ? 'Update employee information' : 'Add a new team member to the directory'}
+              {viewMode === 'edit' ? 'Update member information' : 'Add a new member to the directory'}
             </p>
           </div>
           <Button variant="outline" onClick={() => {
@@ -178,7 +178,7 @@ export function EmployeesList({
           {isHR && (
             <Button onClick={() => setViewMode('create')} data-testid="button-add-employee">
               <UserPlus className="mr-2 h-4 w-4" />
-              Add Employee
+              Add Member
             </Button>
           )}
         </div>
@@ -201,7 +201,7 @@ export function EmployeesList({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="employee">Employee</SelectItem>
+              <SelectItem value="employee">Member</SelectItem>
               <SelectItem value="supervisor">Supervisor</SelectItem>
               <SelectItem value="hr">HR</SelectItem>
             </SelectContent>
@@ -220,7 +220,7 @@ export function EmployeesList({
             {isHR && !searchQuery && roleFilter === 'all' && (
               <Button onClick={() => setViewMode('create')} className="mt-4">
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add First Employee
+                Add First Member
               </Button>
             )}
           </div>
@@ -293,7 +293,7 @@ export function EmployeesList({
           <Card>
             <CardContent className="flex items-center gap-3 p-6">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Loading employee...</span>
+              <span>Loading member...</span>
             </CardContent>
           </Card>
         </div>

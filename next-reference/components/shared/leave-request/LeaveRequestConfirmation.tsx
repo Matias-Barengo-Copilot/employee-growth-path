@@ -196,11 +196,11 @@ export function LeaveRequestConfirmation({ user, leaveRequest }: LeaveRequestCon
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Employee Information */}
+          {/* Member Information */}
           <div>
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Employee Information
+              Member Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
               <div>

@@ -117,7 +117,7 @@ export function LeaveRequestCard({
   const getRoleLabel = (role: string) => {
     switch (role.toLowerCase()) {
       case 'employee':
-        return 'Employee';
+        return 'Member';
       case 'supervisor':
         return 'Supervisor';
       case 'hr':
@@ -128,7 +128,7 @@ export function LeaveRequestCard({
   };
 
   const roleTypeLabels: Record<string, string> = {
-    employee: 'Employee',
+    employee: 'Member',
     individual_contractor: 'Individual Contractor',
   };
 

@@ -13,7 +13,7 @@ interface EmployeeCardProps {
 }
 
 const roleLabels: Record<string, string> = {
-  employee: 'Employee',
+  employee: 'Member',
   supervisor: 'Supervisor',
   hr: 'HR',
 };

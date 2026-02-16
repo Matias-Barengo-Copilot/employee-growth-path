@@ -49,7 +49,7 @@ export function EmployeeSelector<TFieldValues extends Record<string, unknown> = 
   form,
   name,
   label,
-  placeholder = 'Select employee',
+  placeholder = 'Select member',
   companyId,
   excludeEmployeeId,
   disabled = false,
@@ -107,7 +107,7 @@ export function EmployeeSelector<TFieldValues extends Record<string, unknown> = 
                   </div>
                 ) : employees.length === 0 ? (
                   <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No eligible employees found
+                    No eligible members found
                   </div>
                 ) : (
                   employees.map((employee) => (
