@@ -133,6 +133,7 @@ export default function EmployeeProfilePage() {
     if (!employee) return;
     setEditForm({
       title: employee.title || '',
+      department: employee.department || '',
       location: employee.location || '',
       timezone: employee.timezone || '',
       birthday: employee.birthday || '',
@@ -263,6 +264,11 @@ export default function EmployeeProfilePage() {
                   <p className="text-muted-foreground text-sm" data-testid="text-profile-title">
                     {employee.title || 'Team Member'}
                   </p>
+                  {employee.department && (
+                    <p className="text-muted-foreground text-xs" data-testid="text-profile-department">
+                      {employee.department}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-2 mt-2">
                     <Badge variant={roleVariants[employee.role] || 'outline'}>
                       {roleLabels[employee.role] || employee.role}
@@ -461,6 +467,26 @@ function EditProfileForm({
               onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
               data-testid="input-title"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="department">Team</Label>
+            <Select
+              value={editForm.department || ''}
+              onValueChange={(value) => setEditForm({ ...editForm, department: value })}
+            >
+              <SelectTrigger data-testid="select-department">
+                <SelectValue placeholder="Select your team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Project Management">Project Management</SelectItem>
+                <SelectItem value="Artificial Intelligence">Artificial Intelligence</SelectItem>
+                <SelectItem value="Software Engineering">Software Engineering</SelectItem>
+                <SelectItem value="QA">QA</SelectItem>
+                <SelectItem value="Design">Design</SelectItem>
+                <SelectItem value="HR">HR</SelectItem>
+                <SelectItem value="Management">Management</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>

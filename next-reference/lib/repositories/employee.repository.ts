@@ -59,6 +59,7 @@ export class EmployeeRepository {
         joiningDate: employees.joiningDate,
         birthday: employees.birthday,
         title: employees.title,
+        department: employees.department,
         location: employees.location,
         timezone: employees.timezone,
         slackHandle: employees.slackHandle,
@@ -112,6 +113,7 @@ export class EmployeeRepository {
         country: employees.country,
         location: employees.location,
         title: employees.title,
+        department: employees.department,
         role: employees.role,
         roleType: employees.roleType,
         joiningDate: employees.joiningDate,
@@ -136,6 +138,7 @@ export class EmployeeRepository {
         country: employees.country,
         location: employees.location,
         title: employees.title,
+        department: employees.department,
         role: employees.role,
         roleType: employees.roleType,
         joiningDate: employees.joiningDate,
@@ -284,6 +287,7 @@ export class EmployeeRepository {
         country: employees.country,
         location: employees.location,
         title: employees.title,
+        department: employees.department,
         role: employees.role,
         roleType: employees.roleType,
         joiningDate: employees.joiningDate,
@@ -330,6 +334,7 @@ export class EmployeeRepository {
     if (data.joiningDate !== undefined) updateData.joiningDate = data.joiningDate || null;
     if (data.birthday !== undefined) updateData.birthday = data.birthday || null;
     if (data.title !== undefined) updateData.title = data.title || null;
+    if (data.department !== undefined) updateData.department = data.department || null;
     if (data.location !== undefined) updateData.location = data.location || null;
     if (data.timezone !== undefined) updateData.timezone = data.timezone || null;
     if (data.slackHandle !== undefined) updateData.slackHandle = data.slackHandle || null;
