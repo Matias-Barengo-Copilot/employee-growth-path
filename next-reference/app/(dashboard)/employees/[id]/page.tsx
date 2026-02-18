@@ -12,6 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TIMEZONE_OPTIONS, getTimezoneLabel } from '@/lib/constants/timezones';
+import {
   ArrowLeft,
   Mail,
   MapPin,
@@ -308,7 +316,7 @@ export default function EmployeeProfilePage() {
                 {employee.timezone && (
                   <div className="flex items-center gap-1.5" data-testid="text-timezone">
                     <Clock className="h-4 w-4" />
-                    <span>{employee.timezone}</span>
+                    <span>{getTimezoneLabel(employee.timezone)}</span>
                   </div>
                 )}
                 {employee.slackHandle && (
@@ -491,13 +499,26 @@ function EditProfileForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="timezone">Timezone</Label>
-            <Input
-              id="timezone"
-              placeholder="e.g. PST (UTC-8)"
+            <Select
               value={editForm.timezone || ''}
-              onChange={(e) => setEditForm({ ...editForm, timezone: e.target.value })}
-              data-testid="input-timezone"
-            />
+              onValueChange={(value) => setEditForm({ ...editForm, timezone: value })}
+            >
+              <SelectTrigger data-testid="select-timezone">
+                <SelectValue placeholder="Select your timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                {editForm.timezone && !TIMEZONE_OPTIONS.some(t => t.value === editForm.timezone) && (
+                  <SelectItem value={editForm.timezone}>
+                    {editForm.timezone} (current)
+                  </SelectItem>
+                )}
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="slackHandle">Slack Handle</Label>
