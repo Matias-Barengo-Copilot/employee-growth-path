@@ -10,8 +10,8 @@ import {
   MessageSquare,
   TrendingUp,
   Calendar,
-} from 'lucide-react';
-import { NavigationItem, UserRole } from '@/lib/types/navigation';
+} from "lucide-react";
+import { NavigationItem, UserRole } from "@/lib/types/navigation";
 
 export type NavigationSection = {
   label: string;
@@ -25,6 +25,13 @@ const baseNavigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
     roles: ["employee", "supervisor", "hr"],
     exactMatch: true,
+  },
+  {
+    label: "Directory",
+    href: "/employees",
+    icon: Users,
+    roles: ["employee", "supervisor", "hr"],
+    exactMatch: false,
   },
   {
     label: "Goals",
@@ -44,13 +51,6 @@ const baseNavigationItems: NavigationItem[] = [
     label: "Feedback",
     href: "/feedback",
     icon: MessageSquare,
-    roles: ["employee", "supervisor", "hr"],
-    exactMatch: false,
-  },
-  {
-    label: "Career Growth",
-    href: "/career",
-    icon: TrendingUp,
     roles: ["employee", "supervisor", "hr"],
     exactMatch: false,
   },
@@ -92,9 +92,9 @@ const baseNavigationItems: NavigationItem[] = [
     ],
   },
   {
-    label: "Directory",
-    href: "/employees",
-    icon: Users,
+    label: "Career",
+    href: "/career",
+    icon: TrendingUp,
     roles: ["employee", "supervisor", "hr"],
     exactMatch: false,
   },
@@ -103,8 +103,8 @@ const baseNavigationItems: NavigationItem[] = [
 export const navigationItems: NavigationItem[] = baseNavigationItems;
 
 const ALL_REQUESTS_NAV_ITEM: NavigationItem = {
-  label: 'All Requests',
-  href: '/requests/all-requests',
+  label: "All Requests",
+  href: "/requests/all-requests",
   icon: CheckCircle,
   roles: [],
   exactMatch: false,
@@ -112,7 +112,7 @@ const ALL_REQUESTS_NAV_ITEM: NavigationItem = {
 
 export function getNavigationItemsByRole(
   role: UserRole,
-  options?: { canViewAllLeaveRequests?: boolean }
+  options?: { canViewAllLeaveRequests?: boolean },
 ): NavigationItem[] {
   const canViewAll = options?.canViewAllLeaveRequests ?? false;
   const seenKeys = new Set<string>();
@@ -121,16 +121,20 @@ export function getNavigationItemsByRole(
     if (!item.roles.includes(role)) return acc;
 
     if (item.children) {
-      const filteredChildren = item.children.filter((child) => child.roles.includes(role));
+      const filteredChildren = item.children.filter((child) =>
+        child.roles.includes(role),
+      );
 
       if (canViewAll) {
-        if (!filteredChildren.some((c) => c.href === ALL_REQUESTS_NAV_ITEM.href)) {
+        if (
+          !filteredChildren.some((c) => c.href === ALL_REQUESTS_NAV_ITEM.href)
+        ) {
           filteredChildren.push(ALL_REQUESTS_NAV_ITEM);
         }
-        if (!filteredChildren.some((c) => c.href === '/leaves-total')) {
+        if (!filteredChildren.some((c) => c.href === "/leaves-total")) {
           filteredChildren.push({
-            label: 'Leaves Total',
-            href: '/leaves-total',
+            label: "Leaves Total",
+            href: "/leaves-total",
             icon: BarChart3,
             roles: [] as UserRole[],
             exactMatch: false,
