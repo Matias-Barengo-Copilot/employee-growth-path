@@ -183,8 +183,7 @@ export default function GoalsPage() {
     const completed = goals.filter(g => g.status === 'completed').length;
     const inProgress = goals.filter(g => g.status === 'on_track').length;
     const atRiskOrOverdue = goals.filter(g => g.status === 'at_risk' || isOverdue(g.dueDate, g.status)).length;
-    const avgProgress = total > 0 ? Math.round(goals.reduce((sum, g) => sum + g.progress, 0) / total) : 0;
-    return { total, completed, inProgress, atRiskOrOverdue, avgProgress };
+    return { total, completed, inProgress, atRiskOrOverdue };
   }, [goals]);
 
   const scopeTabs: TabDefinition<Scope>[] = [
@@ -364,35 +363,58 @@ export default function GoalsPage() {
 
       {!loading && goals.length > 0 && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <GaugeCard
-            title="Completed"
-            value={stats.completed}
-            total={stats.total}
-            color="#3b82f6"
-            testId="stat-completed"
-          />
-          <GaugeCard
-            title="On Track"
-            value={stats.inProgress}
-            total={stats.total}
-            color="#22c55e"
-            testId="stat-in-progress"
-          />
-          <GaugeCard
-            title="At Risk"
-            value={stats.atRiskOrOverdue}
-            total={stats.total}
-            color="#f59e0b"
-            testId="stat-at-risk"
-          />
-          <GaugeCard
-            title="Avg Progress"
-            value={stats.avgProgress}
-            total={100}
-            color="#8b5cf6"
-            suffix="%"
-            testId="stat-avg-progress"
-          />
+          <Card data-testid="stat-total">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-primary/10">
+                  <Target className="size-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total Goals</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card data-testid="stat-completed">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-blue-500/10">
+                  <CheckCircle className="size-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.completed}</p>
+                  <p className="text-xs text-muted-foreground">Completed</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card data-testid="stat-in-progress">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-green-500/10">
+                  <TrendingUp className="size-4 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.inProgress}</p>
+                  <p className="text-xs text-muted-foreground">On Track</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card data-testid="stat-at-risk">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-amber-500/10">
+                  <AlertTriangle className="size-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.atRiskOrOverdue}</p>
+                  <p className="text-xs text-muted-foreground">At Risk</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -573,79 +595,6 @@ export default function GoalsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function GaugeCard({
-  title,
-  value,
-  total,
-  color,
-  suffix = '',
-  testId,
-}: {
-  title: string;
-  value: number;
-  total: number;
-  color: string;
-  suffix?: string;
-  testId: string;
-}) {
-  const ratio = total > 0 ? Math.min(value / total, 1) : 0;
-  const radius = 40;
-  const strokeWidth = 8;
-  const cx = 50;
-  const cy = 50;
-  const startAngle = Math.PI;
-  const endAngle = startAngle + Math.PI * ratio;
-  const bgEndAngle = startAngle + Math.PI;
-
-  const arcPath = (start: number, end: number) => {
-    const x1 = cx + radius * Math.cos(start);
-    const y1 = cy + radius * Math.sin(start);
-    const x2 = cx + radius * Math.cos(end);
-    const y2 = cy + radius * Math.sin(end);
-    const largeArc = end - start > Math.PI ? 1 : 0;
-    return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
-  };
-
-  return (
-    <Card data-testid={testId}>
-      <CardContent className="p-4 flex flex-col items-center">
-        <div className="flex items-center justify-between w-full mb-1">
-          <span className="text-xs font-medium text-muted-foreground">{title}</span>
-          <span className="text-xs text-muted-foreground">
-            {suffix ? `Target: 100%` : `Target: ${total}`}
-          </span>
-        </div>
-        <div className="relative w-24 h-14">
-          <svg viewBox="0 0 100 55" className="w-full h-full">
-            <path
-              d={arcPath(startAngle, bgEndAngle)}
-              fill="none"
-              stroke="currentColor"
-              className="text-muted/40"
-              strokeWidth={strokeWidth}
-              strokeLinecap="round"
-            />
-            {ratio > 0 && (
-              <path
-                d={arcPath(startAngle, endAngle)}
-                fill="none"
-                stroke={color}
-                strokeWidth={strokeWidth}
-                strokeLinecap="round"
-              />
-            )}
-          </svg>
-          <div className="absolute inset-0 flex items-end justify-center pb-0.5">
-            <span className="text-2xl font-bold" style={{ color }}>
-              {value}{suffix}
-            </span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
