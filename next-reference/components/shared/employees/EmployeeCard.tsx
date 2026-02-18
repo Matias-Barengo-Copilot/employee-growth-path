@@ -66,10 +66,10 @@ export function EmployeeCard({ employee }: EmployeeCardProps) {
             </Badge>
 
             <div className="flex flex-col items-center gap-1.5 text-muted-foreground w-full">
-              {'country' in employee && employee.country && (
+              {(employee.location || employee.country) && (
                 <div className="flex items-center gap-1.5 text-xs">
                   <MapPin className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{employee.country}</span>
+                  <span className="truncate">{employee.location || employee.country}</span>
                 </div>
               )}
               <div className="flex items-center gap-1.5 text-xs">
