@@ -18,13 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { TIMEZONE_OPTIONS, getTimezoneLabel } from '@/lib/constants/timezones';
+import { format, parse } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import {
   ArrowLeft,
   Mail,
   MapPin,
   Cake,
-  Calendar,
+  Calendar as CalendarIcon,
   Zap,
   MessageSquare,
   Loader2,
@@ -69,8 +73,8 @@ function getInitials(name: string): string {
 function formatBirthday(birthday: string | null): string | null {
   if (!birthday) return null;
   try {
-    const date = new Date(birthday + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    const date = parse(birthday, 'yyyy-MM-dd', new Date());
+    return format(date, 'MM/dd/yyyy');
   } catch {
     return null;
   }
@@ -326,7 +330,7 @@ export default function EmployeeProfilePage() {
                 )}
                 {employee.joiningDate && (
                   <div className="flex items-center gap-1.5" data-testid="text-joining-date">
-                    <Calendar className="h-4 w-4" />
+                    <CalendarIcon className="h-4 w-4" />
                     <span>Joined {formatLocalDate(employee.joiningDate)}</span>
                   </div>
                 )}
@@ -514,14 +518,33 @@ function EditProfileForm({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="birthday">Date of Birth</Label>
-            <Input
-              id="birthday"
-              type="date"
-              value={editForm.birthday || ''}
-              onChange={(e) => setEditForm({ ...editForm, birthday: e.target.value })}
-              data-testid="input-birthday"
-            />
+            <Label>Date of Birth</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  data-testid="input-birthday"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {editForm.birthday
+                    ? format(parse(editForm.birthday, 'yyyy-MM-dd', new Date()), 'MM/dd/yyyy')
+                    : 'Pick a date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  locale={enUS}
+                  selected={editForm.birthday ? parse(editForm.birthday, 'yyyy-MM-dd', new Date()) : undefined}
+                  onSelect={(date) => setEditForm({ ...editForm, birthday: date ? format(date, 'yyyy-MM-dd') : '' })}
+                  captionLayout="dropdown"
+                  fromYear={1950}
+                  toYear={new Date().getFullYear()}
+                  defaultMonth={editForm.birthday ? parse(editForm.birthday, 'yyyy-MM-dd', new Date()) : undefined}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
