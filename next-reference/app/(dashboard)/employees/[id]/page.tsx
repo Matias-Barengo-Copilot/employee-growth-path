@@ -30,7 +30,6 @@ import {
   Loader2,
   Users,
   Clock,
-  Hash,
   Pencil,
   X,
   Check,
@@ -87,7 +86,7 @@ function computeProfileCompletion(emp: EmployeeDetail): number {
     emp.currentlyWorkingOn,
     emp.strengths && emp.strengths.length > 0 ? 'filled' : null,
     emp.funFacts && emp.funFacts.length > 0 ? 'filled' : null,
-    emp.slackHandle,
+    emp.birthday,
   ];
   const filled = fields.filter(Boolean).length;
   return Math.round((filled / fields.length) * 100);
@@ -134,7 +133,7 @@ export default function EmployeeProfilePage() {
       title: employee.title || '',
       location: employee.location || '',
       timezone: employee.timezone || '',
-      slackHandle: employee.slackHandle || '',
+      birthday: employee.birthday || '',
       whatIDo: employee.whatIDo || '',
       workingPreferences: employee.workingPreferences || '',
       currentlyWorkingOn: employee.currentlyWorkingOn || '',
@@ -317,12 +316,6 @@ export default function EmployeeProfilePage() {
                   <div className="flex items-center gap-1.5" data-testid="text-timezone">
                     <Clock className="h-4 w-4" />
                     <span>{getTimezoneLabel(employee.timezone)}</span>
-                  </div>
-                )}
-                {employee.slackHandle && (
-                  <div className="flex items-center gap-1.5" data-testid="text-slack">
-                    <Hash className="h-4 w-4" />
-                    <span>@{employee.slackHandle}</span>
                   </div>
                 )}
                 {birthdayDisplay && (
@@ -521,13 +514,13 @@ function EditProfileForm({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="slackHandle">Slack Handle</Label>
+            <Label htmlFor="birthday">Date of Birth</Label>
             <Input
-              id="slackHandle"
-              placeholder="e.g. jane.doe"
-              value={editForm.slackHandle || ''}
-              onChange={(e) => setEditForm({ ...editForm, slackHandle: e.target.value })}
-              data-testid="input-slack"
+              id="birthday"
+              type="date"
+              value={editForm.birthday || ''}
+              onChange={(e) => setEditForm({ ...editForm, birthday: e.target.value })}
+              data-testid="input-birthday"
             />
           </div>
         </CardContent>
