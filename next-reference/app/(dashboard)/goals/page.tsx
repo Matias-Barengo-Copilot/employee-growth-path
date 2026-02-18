@@ -730,12 +730,33 @@ function GoalForm({
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="goal-due-date">Due Date</Label>
+        <Label htmlFor="goal-due-date">Due Date (MM/DD/YYYY)</Label>
         <Input
           id="goal-due-date"
-          type="date"
-          value={formData.dueDate}
-          onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+          type="text"
+          placeholder="MM/DD/YYYY"
+          value={formData.dueDate ? (() => {
+            const [y, m, d] = formData.dueDate.split('-');
+            return y && m && d ? `${m}/${d}/${y}` : formData.dueDate;
+          })() : ''}
+          onChange={(e) => {
+            let val = e.target.value.replace(/[^\d/]/g, '');
+            const digits = val.replace(/\//g, '');
+            if (digits.length <= 2) {
+              val = digits;
+            } else if (digits.length <= 4) {
+              val = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+            } else {
+              val = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+            }
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+              const [mm, dd, yyyy] = val.split('/');
+              setFormData({ ...formData, dueDate: `${yyyy}-${mm}-${dd}` });
+            } else {
+              setFormData({ ...formData, dueDate: val });
+            }
+          }}
+          maxLength={10}
           data-testid="input-goal-due-date"
         />
       </div>
