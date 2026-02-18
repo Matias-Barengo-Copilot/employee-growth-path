@@ -10,6 +10,7 @@ export interface EmployeeData {
   email: string;
   country: string;
   location: string | null;
+  title: string | null;
   role: EmployeeRole;
   roleType: EmployeeRoleType;
   joiningDate: string | null;

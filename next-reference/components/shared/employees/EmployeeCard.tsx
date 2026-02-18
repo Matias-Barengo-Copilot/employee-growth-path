@@ -2,27 +2,13 @@
 
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Mail, MapPin, Cake } from 'lucide-react';
 import { EmployeeListItem } from '@/lib/types/employee';
-import { formatLocalDate } from '@/lib/utils/date';
 
 interface EmployeeCardProps {
   employee: EmployeeListItem;
 }
-
-const roleLabels: Record<string, string> = {
-  employee: 'Member',
-  supervisor: 'Supervisor',
-  hr: 'HR',
-};
-
-const roleVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
-  employee: 'outline',
-  supervisor: 'secondary',
-  hr: 'default',
-};
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -61,9 +47,9 @@ export function EmployeeCard({ employee }: EmployeeCardProps) {
               {employee.name}
             </h3>
 
-            <Badge variant={roleVariants[employee.role] || 'outline'} className="mb-3 text-xs">
-              {roleLabels[employee.role] || employee.role}
-            </Badge>
+            <p className="text-sm text-muted-foreground mb-3" data-testid={`text-employee-title-${employee.id}`}>
+              {employee.title || 'Team Member'}
+            </p>
 
             <div className="flex flex-col items-center gap-1.5 text-muted-foreground w-full">
               {(employee.location || employee.country) && (
