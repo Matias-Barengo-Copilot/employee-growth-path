@@ -138,6 +138,7 @@ export default function EmployeeProfilePage() {
       location: employee.location || '',
       timezone: employee.timezone || '',
       birthday: employee.birthday || '',
+      joiningDate: employee.joiningDate || '',
       whatIDo: employee.whatIDo || '',
       workingPreferences: employee.workingPreferences || '',
       currentlyWorkingOn: employee.currentlyWorkingOn || '',
@@ -331,7 +332,7 @@ export default function EmployeeProfilePage() {
                 {employee.joiningDate && (
                   <div className="flex items-center gap-1.5" data-testid="text-joining-date">
                     <CalendarIcon className="h-4 w-4" />
-                    <span>Joined {formatLocalDate(employee.joiningDate)}</span>
+                    <span>Joined {format(parse(employee.joiningDate, 'yyyy-MM-dd', new Date()), 'MM/dd/yyyy')}</span>
                   </div>
                 )}
               </div>
@@ -516,6 +517,35 @@ function EditProfileForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Join Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  data-testid="input-joining-date"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {editForm.joiningDate
+                    ? format(parse(editForm.joiningDate, 'yyyy-MM-dd', new Date()), 'MM/dd/yyyy')
+                    : 'Pick a date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  locale={enUS}
+                  selected={editForm.joiningDate ? parse(editForm.joiningDate, 'yyyy-MM-dd', new Date()) : undefined}
+                  onSelect={(date) => setEditForm({ ...editForm, joiningDate: date ? format(date, 'yyyy-MM-dd') : '' })}
+                  captionLayout="dropdown"
+                  fromYear={2000}
+                  toYear={new Date().getFullYear()}
+                  defaultMonth={editForm.joiningDate ? parse(editForm.joiningDate, 'yyyy-MM-dd', new Date()) : undefined}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label>Date of Birth</Label>
