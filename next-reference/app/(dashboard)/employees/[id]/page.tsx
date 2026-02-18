@@ -40,7 +40,6 @@ import {
   Briefcase,
   Lightbulb,
   Heart,
-  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatLocalDate } from '@/lib/utils/date';
@@ -88,7 +87,6 @@ function computeProfileCompletion(emp: EmployeeDetail): number {
     emp.whatIDo,
     emp.workingPreferences,
     emp.currentlyWorkingOn,
-    emp.strengths && emp.strengths.length > 0 ? 'filled' : null,
     emp.funFacts && emp.funFacts.length > 0 ? 'filled' : null,
     emp.birthday,
   ];
@@ -142,7 +140,6 @@ export default function EmployeeProfilePage() {
       whatIDo: employee.whatIDo || '',
       workingPreferences: employee.workingPreferences || '',
       currentlyWorkingOn: employee.currentlyWorkingOn || '',
-      strengths: employee.strengths || [],
       funFacts: employee.funFacts || [],
     });
     setIsEditing(true);
@@ -167,13 +164,13 @@ export default function EmployeeProfilePage() {
     }
   };
 
-  const addArrayItem = (field: 'strengths' | 'funFacts', value: string) => {
+  const addArrayItem = (field: 'funFacts', value: string) => {
     if (!value.trim()) return;
     const current = (editForm[field] as string[]) || [];
     setEditForm({ ...editForm, [field]: [...current, value.trim()] });
   };
 
-  const removeArrayItem = (field: 'strengths' | 'funFacts', index: number) => {
+  const removeArrayItem = (field: 'funFacts', index: number) => {
     const current = (editForm[field] as string[]) || [];
     setEditForm({ ...editForm, [field]: current.filter((_, i) => i !== index) });
   };
@@ -379,7 +376,6 @@ export default function EmployeeProfilePage() {
 
 function ProfileInfoCards({ employee }: { employee: EmployeeDetail }) {
   const hasInfo = employee.currentlyWorkingOn || employee.workingPreferences ||
-    (employee.strengths && employee.strengths.length > 0) ||
     (employee.funFacts && employee.funFacts.length > 0);
 
   if (!hasInfo) return null;
@@ -414,24 +410,6 @@ function ProfileInfoCards({ employee }: { employee: EmployeeDetail }) {
         </Card>
       )}
 
-      {employee.strengths && employee.strengths.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">Strengths</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2" data-testid="list-strengths">
-              {employee.strengths.map((strength) => (
-                <Badge key={strength} variant="secondary">
-                  {strength}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {employee.funFacts && employee.funFacts.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
@@ -462,10 +440,9 @@ function EditProfileForm({
 }: {
   editForm: UpdateEmployeeInput;
   setEditForm: (form: UpdateEmployeeInput) => void;
-  addArrayItem: (field: 'strengths' | 'funFacts', value: string) => void;
-  removeArrayItem: (field: 'strengths' | 'funFacts', index: number) => void;
+  addArrayItem: (field: 'funFacts', value: string) => void;
+  removeArrayItem: (field: 'funFacts', index: number) => void;
 }) {
-  const [newStrength, setNewStrength] = useState('');
   const [newFunFact, setNewFunFact] = useState('');
 
   return (
@@ -616,110 +593,53 @@ function EditProfileForm({
               data-testid="input-working-preferences"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Strengths</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {(editForm.strengths || []).map((strength, i) => (
-              <Badge key={i} variant="secondary" className="gap-1 pr-1">
-                {strength}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 ml-0.5"
-                  type="button"
-                  onClick={() => removeArrayItem('strengths', i)}
-                  data-testid={`button-remove-strength-${i}`}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a strength..."
-              value={newStrength}
-              onChange={(e) => setNewStrength(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addArrayItem('strengths', newStrength);
-                  setNewStrength('');
-                }
-              }}
-              data-testid="input-new-strength"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => {
-                addArrayItem('strengths', newStrength);
-                setNewStrength('');
-              }}
-              data-testid="button-add-strength"
-            >
-              Add
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Fun Facts</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <ul className="space-y-2">
-            {(editForm.funFacts || []).map((fact, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm">
-                <span className="text-primary mt-0.5">&#x2022;</span>
-                <span className="flex-1">{fact}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 shrink-0"
-                  type="button"
-                  onClick={() => removeArrayItem('funFacts', i)}
-                  data-testid={`button-remove-funfact-${i}`}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a fun fact..."
-              value={newFunFact}
-              onChange={(e) => setNewFunFact(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
+          <div className="space-y-2">
+            <Label>Fun Facts</Label>
+            <ul className="space-y-2">
+              {(editForm.funFacts || []).map((fact, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <span className="text-primary mt-0.5">&#x2022;</span>
+                  <span className="flex-1">{fact}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 shrink-0"
+                    type="button"
+                    onClick={() => removeArrayItem('funFacts', i)}
+                    data-testid={`button-remove-funfact-${i}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a fun fact..."
+                value={newFunFact}
+                onChange={(e) => setNewFunFact(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addArrayItem('funFacts', newFunFact);
+                    setNewFunFact('');
+                  }
+                }}
+                data-testid="input-new-funfact"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => {
                   addArrayItem('funFacts', newFunFact);
                   setNewFunFact('');
-                }
-              }}
-              data-testid="input-new-funfact"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => {
-                addArrayItem('funFacts', newFunFact);
-                setNewFunFact('');
-              }}
-              data-testid="button-add-funfact"
-            >
-              Add
-            </Button>
+                }}
+                data-testid="button-add-funfact"
+              >
+                Add
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
