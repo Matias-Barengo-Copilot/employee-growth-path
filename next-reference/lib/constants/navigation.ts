@@ -10,6 +10,7 @@ import {
   MessageSquare,
   TrendingUp,
   Calendar,
+  CalendarDays,
 } from "lucide-react";
 import { NavigationItem, UserRole } from "@/lib/types/navigation";
 
@@ -90,6 +91,13 @@ const baseNavigationItems: NavigationItem[] = [
         exactMatch: false,
       },
     ],
+  },
+  {
+    label: "Calendar",
+    href: "/calendar",
+    icon: CalendarDays,
+    roles: ["employee", "supervisor", "hr"],
+    exactMatch: false,
   },
   {
     label: "Career",
