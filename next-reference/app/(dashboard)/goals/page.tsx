@@ -415,20 +415,6 @@ export default function GoalsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2" data-testid="filter-category-bar">
-        {CATEGORIES.map((cat) => (
-          <Button
-            key={cat}
-            variant={activeCategory === cat ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCategoryChange(cat)}
-            data-testid={`button-filter-${cat}`}
-          >
-            {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
-          </Button>
-        ))}
-      </div>
-
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
