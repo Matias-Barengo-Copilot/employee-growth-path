@@ -6,10 +6,12 @@ import {
   MessageSquare, 
   MapPin, 
   Clock,
+  Cake,
   Sparkles,
   Target,
   Send
 } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -144,6 +146,12 @@ export default function EmployeeProfile() {
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
                       <span>{employee.timezone}</span>
+                    </div>
+                  )}
+                  {employee.dateOfBirth && isValid(parseISO(employee.dateOfBirth)) && (
+                    <div className="flex items-center gap-1">
+                      <Cake className="h-4 w-4" />
+                      <span>{format(parseISO(employee.dateOfBirth), "MMMM d")}</span>
                     </div>
                   )}
                   {employee.email && (

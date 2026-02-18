@@ -9,12 +9,14 @@ import {
   Clock,
   Hash,
   Briefcase,
+  Cake,
   Pencil,
   X,
   Plus,
   Check,
   Camera,
 } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -42,6 +44,7 @@ const profileFormSchema = z.object({
   location: z.string().optional(),
   timezone: z.string().optional(),
   slackHandle: z.string().optional(),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format").or(z.literal("")).optional(),
   whatIDo: z.string().max(500).optional(),
   workingPreferences: z.string().max(500).optional(),
   currentlyWorkingOn: z.string().max(200).optional(),
@@ -98,6 +101,7 @@ export default function Profile() {
       location: employee?.location || "",
       timezone: employee?.timezone || "",
       slackHandle: employee?.slackHandle || "",
+      dateOfBirth: employee?.dateOfBirth || "",
       whatIDo: employee?.whatIDo || "",
       workingPreferences: employee?.workingPreferences || "",
       currentlyWorkingOn: employee?.currentlyWorkingOn || "",
@@ -217,6 +221,12 @@ export default function Profile() {
                       <span className="flex items-center gap-1.5">
                         <Hash className="h-3.5 w-3.5" />
                         {employee.slackHandle}
+                      </span>
+                    )}
+                    {employee.dateOfBirth && isValid(parseISO(employee.dateOfBirth)) && (
+                      <span className="flex items-center gap-1.5">
+                        <Cake className="h-3.5 w-3.5" />
+                        {format(parseISO(employee.dateOfBirth), "MMMM d")}
                       </span>
                     )}
                   </div>
@@ -381,6 +391,21 @@ export default function Profile() {
                         <FormLabel>Slack Handle</FormLabel>
                         <FormControl>
                           <Input placeholder="@username" {...field} data-testid="input-slack" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Birth</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} data-testid="input-date-of-birth" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
