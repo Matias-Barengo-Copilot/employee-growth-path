@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/page-header";
 import { GoalCard } from "@/components/goal-card";
 import { SnapCard } from "@/components/snap-card";
 import { EmptyState } from "@/components/empty-state";
+import { TIMEZONE_OPTIONS } from "@/lib/constants";
 import type { Employee, Team, Goal, Snap } from "@shared/schema";
 
 interface ProfileData {
@@ -145,7 +146,7 @@ export default function EmployeeProfile() {
                   {employee.timezone && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>{employee.timezone}</span>
+                      <span>{TIMEZONE_OPTIONS.find(t => t.value === employee.timezone)?.label || employee.timezone}</span>
                     </div>
                   )}
                   {employee.dateOfBirth && isValid(parseISO(employee.dateOfBirth)) && (

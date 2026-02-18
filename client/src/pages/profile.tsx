@@ -35,9 +35,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { STRENGTH_OPTIONS } from "@/lib/constants";
+import { STRENGTH_OPTIONS, TIMEZONE_OPTIONS } from "@/lib/constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Employee } from "@shared/schema";
 import { cn } from "@/lib/utils";
+
+function getTimezoneLabel(value: string) {
+  const tz = TIMEZONE_OPTIONS.find((t) => t.value === value);
+  return tz ? tz.label : value;
+}
 
 const profileFormSchema = z.object({
   title: z.string().optional(),
@@ -214,7 +226,7 @@ export default function Profile() {
                     {employee.timezone && (
                       <span className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5" />
-                        {employee.timezone}
+                        {getTimezoneLabel(employee.timezone)}
                       </span>
                     )}
                     {employee.slackHandle && (
@@ -373,15 +385,34 @@ export default function Profile() {
                   <FormField
                     control={form.control}
                     name="timezone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Timezone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., PST" {...field} data-testid="input-timezone" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const isLegacy = field.value && !TIMEZONE_OPTIONS.some(t => t.value === field.value);
+                      return (
+                        <FormItem>
+                          <FormLabel>Timezone</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-timezone">
+                                <SelectValue placeholder="Select your timezone" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {isLegacy && (
+                                <SelectItem value={field.value!}>
+                                  {field.value} (current)
+                                </SelectItem>
+                              )}
+                              {TIMEZONE_OPTIONS.map((tz) => (
+                                <SelectItem key={tz.value} value={tz.value}>
+                                  {tz.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                   <FormField
                     control={form.control}
