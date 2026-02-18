@@ -137,7 +137,10 @@ function getDueDateInfo(dueDate: string | null, status: string): { label: string
   if (diffDays <= 7) {
     return { label: `Due in ${diffDays}d`, className: 'text-amber-600 dark:text-amber-400' };
   }
-  return { label: `Due ${due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, className: 'text-muted-foreground' };
+  const mm = String(due.getMonth() + 1).padStart(2, '0');
+  const dd = String(due.getDate()).padStart(2, '0');
+  const yyyy = due.getFullYear();
+  return { label: `Due ${mm}/${dd}/${yyyy}`, className: 'text-muted-foreground' };
 }
 
 function isOverdue(dueDate: string | null, status: string): boolean {
