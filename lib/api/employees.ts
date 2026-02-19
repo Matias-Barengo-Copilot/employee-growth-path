@@ -26,6 +26,13 @@ export interface EmployeeDetail {
   profileImageUrl: string | null;
   usedVacationDays?: number;
   lastVacationResetDate?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  company?: {
+    id: string;
+    name: string;
+    organizationId?: string;
+  } | null;
 }
 
 export interface EmployeeResponse {
