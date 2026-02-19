@@ -18,10 +18,13 @@ export async function GET(request: NextRequest) {
       ? undefined 
       : (excludeParam || user.employeeId);
 
+    const allRoles = searchParams.get('allRoles') === 'true';
+
     const repository = new EmployeeRepository();
     const eligibleEmployees = await repository.findEligibleForProjectRoles(
       companyId || undefined,
-      excludeEmployeeId || undefined
+      excludeEmployeeId || undefined,
+      allRoles
     );
 
     return successResponse(eligibleEmployees);

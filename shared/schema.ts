@@ -64,6 +64,7 @@ export const employees = pgTable("employees", {
   funFacts: text("fun_facts").array(),
   workingPreferences: text("working_preferences"),
   currentlyWorkingOn: text("currently_working_on"),
+  dateOfBirth: text("date_of_birth"),
   isProfileComplete: boolean("is_profile_complete").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

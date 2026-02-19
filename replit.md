@@ -52,7 +52,7 @@ The schema uses PostgreSQL with these core entities:
 - **Users** - Authentication identity (managed by Replit Auth)
 - **Companies** - Organization container
 - **Teams** - Groups within companies
-- **Employees** - User profiles with company/team associations, extended profile fields (title, location, timezone, slackHandle, whatIDo, workingPreferences, currentlyWorkingOn, strengths[], funFacts[], profileImageUrl)
+- **Employees** - User profiles with company/team associations, extended profile fields (title, location, timezone, slackHandle, whatIDo, workingPreferences, currentlyWorkingOn, strengths[], funFacts[], profileImageUrl, dateOfBirth)
 - **Goals** - Personal objectives with category, status, and progress tracking
 - **Snaps** - Recognition messages between employees
 - **Feedback/FeedbackRequests** - Structured feedback with anonymous option

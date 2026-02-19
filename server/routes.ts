@@ -126,11 +126,13 @@ export async function registerRoutes(
     const employee = await ensureEmployee(req, res);
     if (!employee) return;
 
-    const [goals, snapsReceived, snapsSent, incomingRequests] = await Promise.all([
+    const [goals, snapsReceived, snapsSent, incomingRequests, feedbackReceived, feedbackGiven] = await Promise.all([
       storage.getGoalsByEmployee(employee.id),
       storage.getSnapsByRecipient(employee.id),
       storage.getSnapsBySender(employee.id),
       storage.getFeedbackRequestsByResponder(employee.id),
+      storage.getFeedbackByRecipient(employee.id),
+      storage.getFeedbackBySender(employee.id),
     ]);
 
     const companyEmployees = await storage.getEmployeesByCompany(employee.companyId);
@@ -145,16 +147,24 @@ export async function registerRoutes(
 
     const pendingFeedbackRequests = incomingRequests.filter(r => r.status === "pending");
 
+    const recentFeedback = feedbackReceived.slice(0, 3).map(f => ({
+      ...f,
+      sender: f.isAnonymous ? null : employeeMap.get(f.senderId),
+    }));
+
     res.json({
       employee,
       goals,
       recentSnaps,
+      recentFeedback,
       pendingFeedbackRequests,
       stats: {
         totalGoals: goals.length,
         completedGoals: goals.filter(g => g.status === "completed").length,
         snapsReceived: snapsReceived.length,
         snapsGiven: snapsSent.length,
+        feedbackReceived: feedbackReceived.length,
+        feedbackGiven: feedbackGiven.length,
       },
     });
   });

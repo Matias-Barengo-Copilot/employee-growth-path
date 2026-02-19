@@ -40,6 +40,7 @@ export const UpdateEmployeeDto = z.object({
   joiningDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   title: z.string().max(255).optional().nullable(),
+  department: z.string().max(100).optional().nullable(),
   location: z.string().max(255).optional().nullable(),
   timezone: z.string().max(100).optional().nullable(),
   slackHandle: z.string().max(100).optional().nullable(),

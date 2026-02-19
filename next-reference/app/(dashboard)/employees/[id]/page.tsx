@@ -12,24 +12,34 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { TIMEZONE_OPTIONS, getTimezoneLabel } from '@/lib/constants/timezones';
+import { format, parse } from 'date-fns';
+import { enUS } from 'date-fns/locale';
+import {
   ArrowLeft,
   Mail,
   MapPin,
   Cake,
-  Calendar,
+  Calendar as CalendarIcon,
   Zap,
   MessageSquare,
   Loader2,
   Users,
   Clock,
-  Hash,
   Pencil,
   X,
   Check,
   Briefcase,
   Lightbulb,
   Heart,
-  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatLocalDate } from '@/lib/utils/date';
@@ -62,8 +72,8 @@ function getInitials(name: string): string {
 function formatBirthday(birthday: string | null): string | null {
   if (!birthday) return null;
   try {
-    const date = new Date(birthday + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    const date = parse(birthday, 'yyyy-MM-dd', new Date());
+    return format(date, 'MM/dd/yyyy');
   } catch {
     return null;
   }
@@ -77,9 +87,8 @@ function computeProfileCompletion(emp: EmployeeDetail): number {
     emp.whatIDo,
     emp.workingPreferences,
     emp.currentlyWorkingOn,
-    emp.strengths && emp.strengths.length > 0 ? 'filled' : null,
     emp.funFacts && emp.funFacts.length > 0 ? 'filled' : null,
-    emp.slackHandle,
+    emp.birthday,
   ];
   const filled = fields.filter(Boolean).length;
   return Math.round((filled / fields.length) * 100);
@@ -124,13 +133,14 @@ export default function EmployeeProfilePage() {
     if (!employee) return;
     setEditForm({
       title: employee.title || '',
+      department: employee.department || '',
       location: employee.location || '',
       timezone: employee.timezone || '',
-      slackHandle: employee.slackHandle || '',
+      birthday: employee.birthday || '',
+      joiningDate: employee.joiningDate || '',
       whatIDo: employee.whatIDo || '',
       workingPreferences: employee.workingPreferences || '',
       currentlyWorkingOn: employee.currentlyWorkingOn || '',
-      strengths: employee.strengths || [],
       funFacts: employee.funFacts || [],
     });
     setIsEditing(true);
@@ -155,13 +165,13 @@ export default function EmployeeProfilePage() {
     }
   };
 
-  const addArrayItem = (field: 'strengths' | 'funFacts', value: string) => {
+  const addArrayItem = (field: 'funFacts', value: string) => {
     if (!value.trim()) return;
     const current = (editForm[field] as string[]) || [];
     setEditForm({ ...editForm, [field]: [...current, value.trim()] });
   };
 
-  const removeArrayItem = (field: 'strengths' | 'funFacts', index: number) => {
+  const removeArrayItem = (field: 'funFacts', index: number) => {
     const current = (editForm[field] as string[]) || [];
     setEditForm({ ...editForm, [field]: current.filter((_, i) => i !== index) });
   };
@@ -254,6 +264,11 @@ export default function EmployeeProfilePage() {
                   <p className="text-muted-foreground text-sm" data-testid="text-profile-title">
                     {employee.title || 'Team Member'}
                   </p>
+                  {employee.department && (
+                    <p className="text-muted-foreground text-xs" data-testid="text-profile-department">
+                      {employee.department}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-2 mt-2">
                     <Badge variant={roleVariants[employee.role] || 'outline'}>
                       {roleLabels[employee.role] || employee.role}
@@ -308,13 +323,7 @@ export default function EmployeeProfilePage() {
                 {employee.timezone && (
                   <div className="flex items-center gap-1.5" data-testid="text-timezone">
                     <Clock className="h-4 w-4" />
-                    <span>{employee.timezone}</span>
-                  </div>
-                )}
-                {employee.slackHandle && (
-                  <div className="flex items-center gap-1.5" data-testid="text-slack">
-                    <Hash className="h-4 w-4" />
-                    <span>@{employee.slackHandle}</span>
+                    <span>{getTimezoneLabel(employee.timezone)}</span>
                   </div>
                 )}
                 {birthdayDisplay && (
@@ -325,8 +334,8 @@ export default function EmployeeProfilePage() {
                 )}
                 {employee.joiningDate && (
                   <div className="flex items-center gap-1.5" data-testid="text-joining-date">
-                    <Calendar className="h-4 w-4" />
-                    <span>Joined {formatLocalDate(employee.joiningDate)}</span>
+                    <CalendarIcon className="h-4 w-4" />
+                    <span>Joined {format(parse(employee.joiningDate, 'yyyy-MM-dd', new Date()), 'MM/dd/yyyy')}</span>
                   </div>
                 )}
               </div>
@@ -373,7 +382,6 @@ export default function EmployeeProfilePage() {
 
 function ProfileInfoCards({ employee }: { employee: EmployeeDetail }) {
   const hasInfo = employee.currentlyWorkingOn || employee.workingPreferences ||
-    (employee.strengths && employee.strengths.length > 0) ||
     (employee.funFacts && employee.funFacts.length > 0);
 
   if (!hasInfo) return null;
@@ -408,24 +416,6 @@ function ProfileInfoCards({ employee }: { employee: EmployeeDetail }) {
         </Card>
       )}
 
-      {employee.strengths && employee.strengths.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">Strengths</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2" data-testid="list-strengths">
-              {employee.strengths.map((strength) => (
-                <Badge key={strength} variant="secondary">
-                  {strength}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {employee.funFacts && employee.funFacts.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
@@ -456,10 +446,9 @@ function EditProfileForm({
 }: {
   editForm: UpdateEmployeeInput;
   setEditForm: (form: UpdateEmployeeInput) => void;
-  addArrayItem: (field: 'strengths' | 'funFacts', value: string) => void;
-  removeArrayItem: (field: 'strengths' | 'funFacts', index: number) => void;
+  addArrayItem: (field: 'funFacts', value: string) => void;
+  removeArrayItem: (field: 'funFacts', index: number) => void;
 }) {
-  const [newStrength, setNewStrength] = useState('');
   const [newFunFact, setNewFunFact] = useState('');
 
   return (
@@ -480,6 +469,26 @@ function EditProfileForm({
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="department">Team</Label>
+            <Select
+              value={editForm.department || ''}
+              onValueChange={(value) => setEditForm({ ...editForm, department: value })}
+            >
+              <SelectTrigger data-testid="select-department">
+                <SelectValue placeholder="Select your team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Project Management">Project Management</SelectItem>
+                <SelectItem value="Artificial Intelligence">Artificial Intelligence</SelectItem>
+                <SelectItem value="Software Engineering">Software Engineering</SelectItem>
+                <SelectItem value="QA">QA</SelectItem>
+                <SelectItem value="Design">Design</SelectItem>
+                <SelectItem value="HR">HR</SelectItem>
+                <SelectItem value="Management">Management</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
             <Input
               id="location"
@@ -491,23 +500,84 @@ function EditProfileForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="timezone">Timezone</Label>
-            <Input
-              id="timezone"
-              placeholder="e.g. PST (UTC-8)"
+            <Select
               value={editForm.timezone || ''}
-              onChange={(e) => setEditForm({ ...editForm, timezone: e.target.value })}
-              data-testid="input-timezone"
-            />
+              onValueChange={(value) => setEditForm({ ...editForm, timezone: value })}
+            >
+              <SelectTrigger data-testid="select-timezone">
+                <SelectValue placeholder="Select your timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                {editForm.timezone && !TIMEZONE_OPTIONS.some(t => t.value === editForm.timezone) && (
+                  <SelectItem value={editForm.timezone}>
+                    {editForm.timezone} (current)
+                  </SelectItem>
+                )}
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="slackHandle">Slack Handle</Label>
-            <Input
-              id="slackHandle"
-              placeholder="e.g. jane.doe"
-              value={editForm.slackHandle || ''}
-              onChange={(e) => setEditForm({ ...editForm, slackHandle: e.target.value })}
-              data-testid="input-slack"
-            />
+            <Label>Join Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  data-testid="input-joining-date"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {editForm.joiningDate
+                    ? format(parse(editForm.joiningDate, 'yyyy-MM-dd', new Date()), 'MM/dd/yyyy')
+                    : 'Pick a date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  locale={enUS}
+                  selected={editForm.joiningDate ? parse(editForm.joiningDate, 'yyyy-MM-dd', new Date()) : undefined}
+                  onSelect={(date) => setEditForm({ ...editForm, joiningDate: date ? format(date, 'yyyy-MM-dd') : '' })}
+                  captionLayout="dropdown"
+                  fromYear={2000}
+                  toYear={new Date().getFullYear()}
+                  defaultMonth={editForm.joiningDate ? parse(editForm.joiningDate, 'yyyy-MM-dd', new Date()) : undefined}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-2">
+            <Label>Date of Birth</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  data-testid="input-birthday"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {editForm.birthday
+                    ? format(parse(editForm.birthday, 'yyyy-MM-dd', new Date()), 'MM/dd/yyyy')
+                    : 'Pick a date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  locale={enUS}
+                  selected={editForm.birthday ? parse(editForm.birthday, 'yyyy-MM-dd', new Date()) : undefined}
+                  onSelect={(date) => setEditForm({ ...editForm, birthday: date ? format(date, 'yyyy-MM-dd') : '' })}
+                  captionLayout="dropdown"
+                  fromYear={1950}
+                  toYear={new Date().getFullYear()}
+                  defaultMonth={editForm.birthday ? parse(editForm.birthday, 'yyyy-MM-dd', new Date()) : undefined}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
@@ -549,110 +619,53 @@ function EditProfileForm({
               data-testid="input-working-preferences"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Strengths</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {(editForm.strengths || []).map((strength, i) => (
-              <Badge key={i} variant="secondary" className="gap-1 pr-1">
-                {strength}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 ml-0.5"
-                  type="button"
-                  onClick={() => removeArrayItem('strengths', i)}
-                  data-testid={`button-remove-strength-${i}`}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a strength..."
-              value={newStrength}
-              onChange={(e) => setNewStrength(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addArrayItem('strengths', newStrength);
-                  setNewStrength('');
-                }
-              }}
-              data-testid="input-new-strength"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => {
-                addArrayItem('strengths', newStrength);
-                setNewStrength('');
-              }}
-              data-testid="button-add-strength"
-            >
-              Add
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Fun Facts</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <ul className="space-y-2">
-            {(editForm.funFacts || []).map((fact, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm">
-                <span className="text-primary mt-0.5">&#x2022;</span>
-                <span className="flex-1">{fact}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 shrink-0"
-                  type="button"
-                  onClick={() => removeArrayItem('funFacts', i)}
-                  data-testid={`button-remove-funfact-${i}`}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a fun fact..."
-              value={newFunFact}
-              onChange={(e) => setNewFunFact(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
+          <div className="space-y-2">
+            <Label>Fun Facts</Label>
+            <ul className="space-y-2">
+              {(editForm.funFacts || []).map((fact, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <span className="text-primary mt-0.5">&#x2022;</span>
+                  <span className="flex-1">{fact}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 shrink-0"
+                    type="button"
+                    onClick={() => removeArrayItem('funFacts', i)}
+                    data-testid={`button-remove-funfact-${i}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a fun fact..."
+                value={newFunFact}
+                onChange={(e) => setNewFunFact(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addArrayItem('funFacts', newFunFact);
+                    setNewFunFact('');
+                  }
+                }}
+                data-testid="input-new-funfact"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => {
                   addArrayItem('funFacts', newFunFact);
                   setNewFunFact('');
-                }
-              }}
-              data-testid="input-new-funfact"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => {
-                addArrayItem('funFacts', newFunFact);
-                setNewFunFact('');
-              }}
-              data-testid="button-add-funfact"
-            >
-              Add
-            </Button>
+                }}
+                data-testid="button-add-funfact"
+              >
+                Add
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,8 +1,9 @@
 import { Link } from "wouter";
-import { MapPin, Mail, MessageSquare } from "lucide-react";
+import { MapPin, Mail, MessageSquare, Cake } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { format, parseISO, isValid, isSameMonth, isSameDay, setYear } from "date-fns";
 import type { Employee, Team } from "@shared/schema";
 
 interface EmployeeCardProps {
@@ -10,8 +11,19 @@ interface EmployeeCardProps {
   team?: Team | null;
 }
 
+function getBirthdayInfo(dateOfBirth: string | null | undefined) {
+  if (!dateOfBirth) return null;
+  const parsed = parseISO(dateOfBirth);
+  if (!isValid(parsed)) return null;
+  const today = new Date();
+  const thisYearBirthday = setYear(parsed, today.getFullYear());
+  const isBirthdayToday = isSameMonth(today, thisYearBirthday) && isSameDay(today, thisYearBirthday);
+  return { date: parsed, formatted: format(parsed, "MMM d"), isBirthdayToday };
+}
+
 export function EmployeeCard({ employee, team }: EmployeeCardProps) {
   const initials = `${employee.firstName?.[0] || ""}${employee.lastName?.[0] || ""}`.toUpperCase();
+  const birthday = getBirthdayInfo(employee.dateOfBirth);
 
   return (
     <Link href={`/directory/${employee.id}`}>
@@ -50,6 +62,12 @@ export function EmployeeCard({ employee, team }: EmployeeCardProps) {
                 <div className="flex items-center gap-1 text-xs">
                   <MapPin className="h-3 w-3" />
                   <span className="truncate max-w-[80px]">{employee.location}</span>
+                </div>
+              )}
+              {birthday && (
+                <div className="flex items-center gap-1 text-xs">
+                  <Cake className={`h-3 w-3 ${birthday.isBirthdayToday ? "text-primary" : ""}`} />
+                  <span>{birthday.formatted}</span>
                 </div>
               )}
               {employee.email && (

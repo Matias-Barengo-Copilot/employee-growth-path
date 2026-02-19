@@ -75,7 +75,7 @@ export class EmployeeService {
     }
 
     if (user.employeeId === id && user.role !== "hr") {
-      const { name, email, country, role, roleType, joiningDate, birthday, ...profileFields } = data;
+      const { name, email, country, role, roleType, ...profileFields } = data;
       return this.employeeRepository.update(id, profileFields);
     }
 

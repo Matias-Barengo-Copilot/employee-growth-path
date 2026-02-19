@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Target, Plus, Pencil, Trash2, Users, User } from 'lucide-react';
+import { Target, Plus, Pencil, Trash2, Users, User, CheckCircle, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { TabBar, type TabDefinition } from '@/components/shared/TabBar';
 import { useToast } from '@/lib/hooks/useToast';
 import { Pagination } from '@/components/shared/pagination/Pagination';
@@ -70,11 +70,11 @@ const EMPTY_FORM: GoalFormData = {
   progress: 0,
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  not_started: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  on_track: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  at_risk: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
-  completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+const STATUS_ACCENT_COLORS: Record<string, string> = {
+  not_started: 'bg-gray-400',
+  on_track: 'bg-green-500',
+  at_risk: 'bg-amber-500',
+  completed: 'bg-blue-500',
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -121,6 +121,36 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+function getDueDateInfo(dueDate: string | null, status: string): { label: string; className: string } | null {
+  if (!dueDate || status === 'completed') return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate + 'T00:00:00');
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return { label: `Overdue by ${Math.abs(diffDays)}d`, className: 'text-red-600 dark:text-red-400' };
+  }
+  if (diffDays === 0) {
+    return { label: 'Due today', className: 'text-amber-600 dark:text-amber-400' };
+  }
+  if (diffDays <= 7) {
+    return { label: `Due in ${diffDays}d`, className: 'text-amber-600 dark:text-amber-400' };
+  }
+  const mm = String(due.getMonth() + 1).padStart(2, '0');
+  const dd = String(due.getDate()).padStart(2, '0');
+  const yyyy = due.getFullYear();
+  return { label: `Due ${mm}/${dd}/${yyyy}`, className: 'text-muted-foreground' };
+}
+
+function isOverdue(dueDate: string | null, status: string): boolean {
+  if (!dueDate || status === 'completed') return false;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate + 'T00:00:00');
+  return due < now;
+}
+
 export default function GoalsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -147,6 +177,14 @@ export default function GoalsPage() {
   const [formData, setFormData] = useState<GoalFormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const { success, error } = useToast();
+
+  const stats = useMemo(() => {
+    const total = goals.length;
+    const completed = goals.filter(g => g.status === 'completed').length;
+    const inProgress = goals.filter(g => g.status === 'on_track').length;
+    const atRiskOrOverdue = goals.filter(g => g.status === 'at_risk' || isOverdue(g.dueDate, g.status)).length;
+    return { total, completed, inProgress, atRiskOrOverdue };
+  }, [goals]);
 
   const scopeTabs: TabDefinition<Scope>[] = [
     { key: 'my', label: 'My Goals', icon: User },
@@ -323,19 +361,62 @@ export default function GoalsPage() {
         testIdPrefix="tab"
       />
 
-      <div className="flex flex-wrap items-center gap-2" data-testid="filter-category-bar">
-        {CATEGORIES.map((cat) => (
-          <Button
-            key={cat}
-            variant={activeCategory === cat ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCategoryChange(cat)}
-            data-testid={`button-filter-${cat}`}
-          >
-            {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
-          </Button>
-        ))}
-      </div>
+      {!loading && goals.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Card data-testid="stat-total">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-primary/10">
+                  <Target className="size-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total Goals</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card data-testid="stat-completed">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-blue-500/10">
+                  <CheckCircle className="size-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.completed}</p>
+                  <p className="text-xs text-muted-foreground">Completed</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card data-testid="stat-in-progress">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-green-500/10">
+                  <TrendingUp className="size-4 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.inProgress}</p>
+                  <p className="text-xs text-muted-foreground">On Track</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card data-testid="stat-at-risk">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-md bg-amber-500/10">
+                  <AlertTriangle className="size-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.atRiskOrOverdue}</p>
+                  <p className="text-xs text-muted-foreground">At Risk</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -354,32 +435,51 @@ export default function GoalsPage() {
           ))}
         </div>
       ) : goals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground" data-testid="text-empty-state">
-          <Target className="size-10" />
-          <p className="text-sm">
-            {isTeamView
-              ? 'No team goals found. Goals shared with the team or manager will appear here.'
-              : 'No goals found. Create your first goal to get started.'}
-          </p>
-        </div>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center gap-4 py-16" data-testid="text-empty-state">
+            <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
+              <Target className="size-8 text-primary" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-1">
+                {isTeamView ? 'No team goals yet' : 'Set your first goal'}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                {isTeamView
+                  ? 'When teammates share their goals, they will appear here so you can support each other.'
+                  : 'Goals help you stay focused and track your professional growth. Start by creating one.'}
+              </p>
+            </div>
+            {!isTeamView && (
+              <Button onClick={openCreate} data-testid="button-empty-add-goal">
+                <Plus />
+                Create Your First Goal
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {goals.map((goal) => {
-              const isOwner = goal.employeeId === currentEmployeeId;
+              const dueDateInfo = getDueDateInfo(goal.dueDate, goal.status);
               return (
                 <Card
                   key={goal.id}
-                  className={`transition-shadow hover:shadow-md ${!isTeamView ? 'cursor-pointer' : ''}`}
+                  className={`relative overflow-hidden ${!isTeamView ? 'cursor-pointer' : ''}`}
                   onClick={() => !isTeamView ? openEdit(goal) : undefined}
                   data-testid={`card-goal-${goal.id}`}
                 >
-                  <CardHeader>
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <CardTitle className="text-sm">{goal.title}</CardTitle>
-                      {!isTeamView && <Pencil className="size-3.5 text-muted-foreground shrink-0" />}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${STATUS_ACCENT_COLORS[goal.status]}`} />
+                  <CardContent className="p-4 pl-5">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="font-semibold text-sm leading-snug" data-testid={`text-title-${goal.id}`}>
+                        {goal.title}
+                      </h3>
+                      {!isTeamView && <Pencil className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />}
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
+
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
                       <Badge
                         variant="outline"
                         className={CATEGORY_COLORS[goal.category]}
@@ -387,21 +487,16 @@ export default function GoalsPage() {
                       >
                         {CATEGORY_LABELS[goal.category]}
                       </Badge>
-                      <Badge
-                        variant="outline"
-                        className={STATUS_COLORS[goal.status]}
-                        data-testid={`badge-status-${goal.id}`}
-                      >
+                      <span className="text-xs text-muted-foreground" data-testid={`text-status-${goal.id}`}>
                         {STATUS_LABELS[goal.status]}
-                      </Badge>
+                      </span>
                       {isTeamView && (
-                        <Badge variant="outline" data-testid={`badge-visibility-${goal.id}`}>
+                        <Badge variant="outline" className="text-xs" data-testid={`badge-visibility-${goal.id}`}>
                           {VISIBILITY_LABELS[goal.visibility]}
                         </Badge>
                       )}
                     </div>
-                  </CardHeader>
-                  <CardContent>
+
                     {isTeamView && (
                       <div className="flex items-center gap-2 mb-3" data-testid={`text-owner-${goal.id}`}>
                         <Avatar className="size-5">
@@ -414,27 +509,33 @@ export default function GoalsPage() {
                         </span>
                       </div>
                     )}
+
                     {goal.description && (
-                      <p className="mb-3 text-sm text-muted-foreground line-clamp-2" data-testid={`text-description-${goal.id}`}>
+                      <p className="mb-3 text-xs text-muted-foreground line-clamp-2" data-testid={`text-description-${goal.id}`}>
                         {goal.description}
                       </p>
                     )}
-                    <div className="space-y-1">
+
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                         <span>Progress</span>
-                        <span data-testid={`text-progress-${goal.id}`}>{goal.progress}%</span>
+                        <span className="font-medium" data-testid={`text-progress-${goal.id}`}>{goal.progress}%</span>
                       </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted" data-testid={`progress-bar-${goal.id}`}>
+                      <div className="h-2 w-full rounded-full bg-muted" data-testid={`progress-bar-${goal.id}`}>
                         <div
                           className={`h-full rounded-full transition-all ${PROGRESS_BAR_COLORS[goal.status]}`}
                           style={{ width: `${goal.progress}%` }}
                         />
                       </div>
                     </div>
-                    {goal.dueDate && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Due: {new Date(goal.dueDate).toLocaleDateString()}
-                      </p>
+
+                    {dueDateInfo && (
+                      <div className="flex items-center gap-1.5 mt-2.5" data-testid={`text-due-${goal.id}`}>
+                        <Clock className="size-3 shrink-0" />
+                        <span className={`text-xs font-medium ${dueDateInfo.className}`}>
+                          {dueDateInfo.label}
+                        </span>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -496,6 +597,8 @@ export default function GoalsPage() {
     </div>
   );
 }
+
+const PROGRESS_PRESETS = [0, 25, 50, 75, 100];
 
 function GoalForm({
   formData,
@@ -572,7 +675,7 @@ function GoalForm({
       </div>
 
       {mode === 'edit' && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <>
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select
@@ -591,29 +694,69 @@ function GoalForm({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="goal-progress">Progress: {formData.progress}%</Label>
-            <input
-              id="goal-progress"
-              type="range"
-              min={0}
-              max={100}
-              value={formData.progress}
-              onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value, 10) })}
-              className="w-full accent-primary"
-              data-testid="input-goal-progress"
-            />
+          <div className="space-y-2">
+            <Label>Progress: {formData.progress}%</Label>
+            <div className="flex flex-wrap gap-2" data-testid="progress-presets">
+              {PROGRESS_PRESETS.map((val) => (
+                <Button
+                  key={val}
+                  type="button"
+                  variant={formData.progress === val ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, progress: val })}
+                  data-testid={`button-progress-${val}`}
+                >
+                  {val}%
+                </Button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={formData.progress}
+                onChange={(e) => {
+                  const v = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
+                  setFormData({ ...formData, progress: v });
+                }}
+                className="w-24"
+                data-testid="input-goal-progress"
+              />
+              <span className="text-sm text-muted-foreground">%</span>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="goal-due-date">Due Date</Label>
+        <Label htmlFor="goal-due-date">Due Date (MM/DD/YYYY)</Label>
         <Input
           id="goal-due-date"
-          type="date"
-          value={formData.dueDate}
-          onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+          type="text"
+          placeholder="MM/DD/YYYY"
+          value={formData.dueDate ? (() => {
+            const [y, m, d] = formData.dueDate.split('-');
+            return y && m && d ? `${m}/${d}/${y}` : formData.dueDate;
+          })() : ''}
+          onChange={(e) => {
+            let val = e.target.value.replace(/[^\d/]/g, '');
+            const digits = val.replace(/\//g, '');
+            if (digits.length <= 2) {
+              val = digits;
+            } else if (digits.length <= 4) {
+              val = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+            } else {
+              val = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+            }
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+              const [mm, dd, yyyy] = val.split('/');
+              setFormData({ ...formData, dueDate: `${yyyy}-${mm}-${dd}` });
+            } else {
+              setFormData({ ...formData, dueDate: val });
+            }
+          }}
+          maxLength={10}
           data-testid="input-goal-due-date"
         />
       </div>

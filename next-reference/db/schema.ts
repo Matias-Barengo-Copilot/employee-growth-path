@@ -88,6 +88,7 @@ export const employees = pgTable("employees", {
   joiningDate: date("joining_date"),
   birthday: date("birthday"),
   title: varchar("title", { length: 255 }),
+  department: varchar("department", { length: 100 }),
   location: varchar("location", { length: 255 }),
   timezone: varchar("timezone", { length: 100 }),
   slackHandle: varchar("slack_handle", { length: 100 }),

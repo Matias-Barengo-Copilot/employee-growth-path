@@ -14,6 +14,7 @@ export interface EmployeeDetail {
   joiningDate: string | null;
   birthday: string | null;
   title: string | null;
+  department: string | null;
   location: string | null;
   timezone: string | null;
   slackHandle: string | null;
@@ -234,6 +235,7 @@ export interface UpdateEmployeeInput {
   joiningDate?: string;
   birthday?: string;
   title?: string | null;
+  department?: string | null;
   location?: string | null;
   timezone?: string | null;
   slackHandle?: string | null;

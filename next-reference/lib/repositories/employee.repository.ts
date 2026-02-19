@@ -59,6 +59,7 @@ export class EmployeeRepository {
         joiningDate: employees.joiningDate,
         birthday: employees.birthday,
         title: employees.title,
+        department: employees.department,
         location: employees.location,
         timezone: employees.timezone,
         slackHandle: employees.slackHandle,
@@ -110,6 +111,9 @@ export class EmployeeRepository {
         name: employees.name,
         email: employees.email,
         country: employees.country,
+        location: employees.location,
+        title: employees.title,
+        department: employees.department,
         role: employees.role,
         roleType: employees.roleType,
         joiningDate: employees.joiningDate,
@@ -132,6 +136,9 @@ export class EmployeeRepository {
         name: employees.name,
         email: employees.email,
         country: employees.country,
+        location: employees.location,
+        title: employees.title,
+        department: employees.department,
         role: employees.role,
         roleType: employees.roleType,
         joiningDate: employees.joiningDate,
@@ -155,16 +162,18 @@ export class EmployeeRepository {
    * Get employees eligible to be PM or Tech Lead (roles: supervisor, hr)
    * Excludes employees with role "employee" as they are not eligible for project leadership roles
    * Can optionally exclude a specific employee (e.g., the current user creating the request)
+   * When allRoles is true, returns all active employees regardless of role
    * Ordered by name for easy selection
    */
-  async findEligibleForProjectRoles(companyId?: string, excludeEmployeeId?: string) {
-    // Only include roles eligible for PM/Tech Lead (exclude "employee")
-    const eligibleRoles: Array<"supervisor" | "hr"> = ["supervisor", "hr"];
-    
+  async findEligibleForProjectRoles(companyId?: string, excludeEmployeeId?: string, allRoles?: boolean) {
     const conditions = [
-      inArray(employees.role, eligibleRoles),
-      eq(employees.isActive, true), // Only active employees
+      eq(employees.isActive, true),
     ];
+
+    if (!allRoles) {
+      const eligibleRoles: Array<"supervisor" | "hr"> = ["supervisor", "hr"];
+      conditions.push(inArray(employees.role, eligibleRoles));
+    }
     
     if (companyId) {
       conditions.push(eq(employees.companyId, companyId));
@@ -278,6 +287,9 @@ export class EmployeeRepository {
         name: employees.name,
         email: employees.email,
         country: employees.country,
+        location: employees.location,
+        title: employees.title,
+        department: employees.department,
         role: employees.role,
         roleType: employees.roleType,
         joiningDate: employees.joiningDate,
@@ -324,6 +336,7 @@ export class EmployeeRepository {
     if (data.joiningDate !== undefined) updateData.joiningDate = data.joiningDate || null;
     if (data.birthday !== undefined) updateData.birthday = data.birthday || null;
     if (data.title !== undefined) updateData.title = data.title || null;
+    if (data.department !== undefined) updateData.department = data.department || null;
     if (data.location !== undefined) updateData.location = data.location || null;
     if (data.timezone !== undefined) updateData.timezone = data.timezone || null;
     if (data.slackHandle !== undefined) updateData.slackHandle = data.slackHandle || null;

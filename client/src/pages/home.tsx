@@ -23,7 +23,8 @@ import { PageHeader } from "@/components/page-header";
 import { SnapCard } from "@/components/snap-card";
 import { XpLevelWidget, XpWeeklyBreakdown } from "@/components/xp-level-widget";
 import { formatDistanceToNow } from "date-fns";
-import type { Employee, Goal, Snap, FeedbackRequest, Activity as ActivityType } from "@shared/schema";
+import { FeedbackCard } from "@/components/feedback-card";
+import type { Employee, Goal, Snap, Feedback, FeedbackRequest, Activity as ActivityType } from "@shared/schema";
 
 interface EnrichedActivity extends ActivityType {
   actor?: Employee;
@@ -35,12 +36,15 @@ interface DashboardData {
   employee: Employee | null;
   goals: Goal[];
   recentSnaps: Array<Snap & { sender?: Employee; recipient?: Employee }>;
+  recentFeedback: Array<Feedback & { sender?: Employee | null }>;
   pendingFeedbackRequests: FeedbackRequest[];
   stats: {
     totalGoals: number;
     completedGoals: number;
     snapsReceived: number;
     snapsGiven: number;
+    feedbackReceived: number;
+    feedbackGiven: number;
   };
 }
 
@@ -105,8 +109,9 @@ export default function Home() {
   const employee = data?.employee;
   const goals = data?.goals || [];
   const recentSnaps = data?.recentSnaps || [];
+  const recentFeedback = data?.recentFeedback || [];
   const pendingRequests = data?.pendingFeedbackRequests || [];
-  const stats = data?.stats || { totalGoals: 0, completedGoals: 0, snapsReceived: 0, snapsGiven: 0 };
+  const stats = data?.stats || { totalGoals: 0, completedGoals: 0, snapsReceived: 0, snapsGiven: 0, feedbackReceived: 0, feedbackGiven: 0 };
 
   const activeGoals = goals.filter(g => g.status !== "completed");
   const goalProgress = stats.totalGoals > 0 
@@ -156,14 +161,14 @@ export default function Home() {
           <Card className="hover-elevate transition-all">
             <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Pending Requests
+                Feedback
               </CardTitle>
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingRequests.length}</div>
+              <div className="text-2xl font-bold">{stats.feedbackReceived}</div>
               <p className="text-xs text-muted-foreground mt-2">
-                Feedback requests waiting
+                {stats.feedbackGiven} given{pendingRequests.length > 0 ? ` · ${pendingRequests.length} pending` : ""}
               </p>
             </CardContent>
           </Card>
@@ -260,6 +265,39 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="text-base">Recent Feedback</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/feedback">
+                View all
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {recentFeedback.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <MessageSquare className="h-10 w-10 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground mb-3">No feedback received yet</p>
+                <Button size="sm" asChild>
+                  <Link href="/feedback">Request Feedback</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentFeedback.map((fb) => (
+                  <FeedbackCard
+                    key={fb.id}
+                    feedback={fb}
+                    sender={fb.sender}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2">
