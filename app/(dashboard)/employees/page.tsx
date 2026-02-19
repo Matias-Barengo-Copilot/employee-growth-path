@@ -43,7 +43,7 @@ export default function EmployeesPage() {
         const member = await getEmployeeById(selectedMemberId);
         if (member) {
           setEmployees([member as EmployeeListItem]);
-          setPagination({ total: 1, page: 1, limit: 1, totalPages: 1 });
+          setPagination({ total: 1, page: 1, limit: 1, totalPages: 1, hasNext: false, hasPrev: false });
         } else {
           setEmployees([]);
           setPagination(null);
