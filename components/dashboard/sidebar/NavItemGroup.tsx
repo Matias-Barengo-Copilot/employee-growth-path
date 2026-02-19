@@ -10,31 +10,32 @@ import type { NavigationItem } from '@/lib/types/navigation';
 interface NavItemGroupProps {
   label: string;
   icon: LucideIcon;
-  children: NavigationItem[];
+  items: NavigationItem[];
   isCollapsed: boolean;
 }
 
-export function NavItemGroup({ label, icon: Icon, children, isCollapsed }: NavItemGroupProps) {
+export function NavItemGroup({ label, icon: Icon, items, isCollapsed }: NavItemGroupProps) {
   const pathname = usePathname();
-  const isAnyChildActive = children.some((child) =>
+  const isAnyChildActive = items.some((child) =>
     child.exactMatch ? pathname === child.href : pathname.startsWith(child.href)
   );
   const [isOpen, setIsOpen] = useState(isAnyChildActive);
 
   useEffect(() => {
     if (isAnyChildActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsOpen(true);
     }
   }, [isAnyChildActive]);
 
   if (isCollapsed) {
-    const activeChild = children.find((child) =>
+    const activeChild = items.find((child) =>
       child.exactMatch ? pathname === child.href : pathname.startsWith(child.href)
     );
     return (
       <NavItem
         label={label}
-        href={children[0]?.href || '/'}
+        href={items[0]?.href || '/'}
         icon={Icon}
         isActive={isAnyChildActive}
         isCollapsed={true}
@@ -74,7 +75,7 @@ export function NavItemGroup({ label, icon: Icon, children, isCollapsed }: NavIt
         )}
       >
         <ul className="ml-4 mt-1 space-y-0.5 border-l border-slate-200 pl-2">
-          {children.map((child, index) => (
+          {items.map((child, index) => (
             <li key={`${child.href}-${child.label}-${index}`}>
               <NavItem
                 {...child}

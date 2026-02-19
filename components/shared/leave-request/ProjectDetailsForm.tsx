@@ -65,6 +65,7 @@ export function ProjectDetailsForm<TFieldValues extends { projects: ProjectItem[
       // Type assertion needed because React Hook Form's append expects a specific FieldArray type
       // but we know ProjectItem is compatible with the form's projects array type
       // Using 'as any' is necessary here due to React Hook Form's complex generic type constraints
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       append({ projectName: '', pmId: '', techLeadId: '' } as any, { shouldFocus: false });
     } else if (fields.length > 0) {
       // Mark as initialized if projects already exist (e.g., from defaultValues or draft)
@@ -91,6 +92,7 @@ export function ProjectDetailsForm<TFieldValues extends { projects: ProjectItem[
               // Type assertion needed because React Hook Form's append expects a specific FieldArray type
               // but we know ProjectItem is compatible with the form's projects array type
               // Using 'as any' is necessary here due to React Hook Form's complex generic type constraints
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               append({ projectName: '', pmId: '', techLeadId: '' } as any);
             }}
             className="shrink-0"

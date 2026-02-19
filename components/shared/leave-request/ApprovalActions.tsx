@@ -188,7 +188,7 @@ export function ApprovalActions({ leaveRequest, user, onActionComplete }: Approv
               HR has already {hrApproval.status === 'approved' ? 'approved' : 'rejected'} this request.
             </p>
             <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-              You can still record your decision below for reference, but it won't change the final status.
+              You can still record your decision below for reference, but it won&apos;t change the final status.
             </p>
           </div>
         )}

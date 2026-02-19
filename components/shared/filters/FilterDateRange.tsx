@@ -57,6 +57,7 @@ export function FilterDateRange({ config, value, onChange }: FilterDateRangeProp
             to: value.to ? parseYYYYMMDD(value.to) : undefined,
           }
         : undefined;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTempRange(initialRange);
     }
   }, [isOpen, value?.from, value?.to]);

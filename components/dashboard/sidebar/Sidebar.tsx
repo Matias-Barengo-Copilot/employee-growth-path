@@ -116,7 +116,7 @@ export function Sidebar({ userRole, canViewAllLeaveRequests = false }: SidebarPr
                   <NavItemGroup
                     label={item.label}
                     icon={item.icon}
-                    children={item.children}
+                    items={item.children}
                     isCollapsed={isCollapsed}
                   />
                 ) : (
@@ -190,7 +190,7 @@ export function Sidebar({ userRole, canViewAllLeaveRequests = false }: SidebarPr
                   <NavItemGroup
                     label={item.label}
                     icon={item.icon}
-                    children={item.children}
+                    items={item.children}
                     isCollapsed={false}
                   />
                 ) : (

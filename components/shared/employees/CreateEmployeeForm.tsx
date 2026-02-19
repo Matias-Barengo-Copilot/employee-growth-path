@@ -275,7 +275,7 @@ export function CreateEmployeeForm({ user, employeeId, initialData, onSuccess, o
                       <Input type="date" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Member's birthday for celebrations
+                      Member&apos;s birthday for celebrations
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

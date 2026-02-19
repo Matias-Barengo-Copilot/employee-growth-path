@@ -40,10 +40,8 @@ export class EmployeeService {
     page: number = 1,
     limit: number = 10
   ): Promise<PaginatedResponse<EmployeeListItem>> {
-    let effectiveFilters: { companyId?: string; roles?: string[]; search?: string };
-
     const companyId = filters?.companyId || user.companyId;
-    effectiveFilters = { companyId, roles: filters?.roles, search: filters?.search };
+    const effectiveFilters = { companyId, roles: filters?.roles, search: filters?.search };
 
     const data = await this.employeeRepository.findByFilters(effectiveFilters, page, limit);
     const total = await this.employeeRepository.countByFilters(effectiveFilters);
@@ -75,6 +73,7 @@ export class EmployeeService {
     }
 
     if (user.employeeId === id && user.role !== "hr") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { name, email, country, role, roleType, ...profileFields } = data;
       return this.employeeRepository.update(id, profileFields);
     }
