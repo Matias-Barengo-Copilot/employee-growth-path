@@ -16,6 +16,9 @@ export const createMockEmployee = (overrides?: Partial<EmployeeData>): EmployeeD
   name: "Test User",
   email: "test@example.com",
   country: "USA",
+  location: null,
+  title: null,
+  department: null,
   role: "employee",
   roleType: "employee",
   joiningDate: null,
@@ -23,7 +26,7 @@ export const createMockEmployee = (overrides?: Partial<EmployeeData>): EmployeeD
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
-});
+} as EmployeeData);
 
 type MockLeaveRequest = {
   id: string;
