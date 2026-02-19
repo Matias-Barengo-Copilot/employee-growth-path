@@ -162,16 +162,18 @@ export class EmployeeRepository {
    * Get employees eligible to be PM or Tech Lead (roles: supervisor, hr)
    * Excludes employees with role "employee" as they are not eligible for project leadership roles
    * Can optionally exclude a specific employee (e.g., the current user creating the request)
+   * When allRoles is true, returns all active employees regardless of role
    * Ordered by name for easy selection
    */
-  async findEligibleForProjectRoles(companyId?: string, excludeEmployeeId?: string) {
-    // Only include roles eligible for PM/Tech Lead (exclude "employee")
-    const eligibleRoles: Array<"supervisor" | "hr"> = ["supervisor", "hr"];
-    
+  async findEligibleForProjectRoles(companyId?: string, excludeEmployeeId?: string, allRoles?: boolean) {
     const conditions = [
-      inArray(employees.role, eligibleRoles),
-      eq(employees.isActive, true), // Only active employees
+      eq(employees.isActive, true),
     ];
+
+    if (!allRoles) {
+      const eligibleRoles: Array<"supervisor" | "hr"> = ["supervisor", "hr"];
+      conditions.push(inArray(employees.role, eligibleRoles));
+    }
     
     if (companyId) {
       conditions.push(eq(employees.companyId, companyId));

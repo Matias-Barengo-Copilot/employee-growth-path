@@ -183,7 +183,7 @@ export default function FeedbackPage() {
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const res = await fetch('/api/employees/eligible');
+      const res = await fetch('/api/employees/eligible?allRoles=true');
       const json = await res.json();
       if (json.success) setEmployees(json.data);
     } catch {
